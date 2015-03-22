@@ -22,17 +22,26 @@ class Request:
         return len(self.key) == Request.KEY_LENGTH_BYTES
 
     def get_bytes(self):
-        return struct.pack("<c32sH", self.command, self.key, len(self.value)) + value
+        return struct.pack("<c%dsH" % (Request.KEY_LENGTH_BYTES), self.command, self.key, len(self.value)) + value
 
     def __str__(self):
         return str(self.command) + str(self.key) + str(self.value)
 
     @staticmethod
     def from_bytes(b):
-        command, key = struct.unpack(
-            "<c%ds" % Request.KEY_LENGTH_BYTES,
-            b[:Request.VALUE_LENGTH_START_POS]
-        )
+        if len(b) == 0:
+            raise Exception("Empty bytes trying to be parsed as Request")
+
+        command = struct.unpack("<c",b[0])[0]
+
+        if len(b) > Request.VALUE_LENGTH_START_POS:
+            key = struct.unpack(
+                "%ds" % (Request.KEY_LENGTH_BYTES),
+                b[1:Request.VALUE_LENGTH_START_POS]
+            )[0]
+        else:
+            key = ""
+
         if(len(b) > Request.VALUE_LENGTH_START_POS):
             value_length = struct.unpack(
                 "<H",
@@ -45,5 +54,7 @@ class Request:
                     raise Exception("Value Length Too Big %d %d" % (value_length, len(b)))
             else:
                 value = ""
+        else:
+            value = ""
 
         return Request(command, key, value)

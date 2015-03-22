@@ -2,10 +2,12 @@ import hashlib
 import socket
 import sys
 from KVStore import KVStore
+from Message import Message
 from Node import Node
 from Response import *
 from Request import *
 from UDPClient import UDPClient
+from UID import UID
 
 def init_nodes_from_file():
     with open("hosts.txt") as f:
@@ -70,7 +72,11 @@ def handle_shutdown_request(request):
     sys.exit()
 
 def handle_message(message):
-    request = Request.from_bytes(message.payload)
+    try:
+        request = Request.from_bytes(message.payload)
+    except:
+        print "PARSE ERROR " + str(message.get_bytes())
+        return
 
     if request.command == Request.SHUTDOWN:
         handle_shutdown_request(request)
@@ -87,9 +93,9 @@ def handle_message(message):
         else:
             client.send_response(message, UnrecognizedCommandResponse())
     else:
-        forward_request(request, dest_node)
+        forward_request(message, dest_node)
 
-def forward_request(request, dest_node):
+def forward_request(message, dest_node):
     client.send_request(message.get_bytes(), (dest_node.ip, dest_node.port), forward_succeeded, forward_failed)
 
 def forward_succeeded():
@@ -99,6 +105,11 @@ def forward_failed(request):
     for node in nodes:
         if node.ip == request.dest_addr[0] and node.port == request.dest_addr[1]:
             node.online = False
+
+    uid = UID.from_bytes(request.payload)
+    payload = request.payload[UID.LENGTH * 2:]
+    message = Message(uid, payload, request.source_addr)
+    handle_message(message)
 
 def get_responsible_node_for_key(key):
     dest_node = nodes[-1]

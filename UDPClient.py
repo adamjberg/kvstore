@@ -6,8 +6,9 @@ from UID import UID
 from Message import Message
 
 class UDPClientRequest:
-    def __init__(self, addr, uid, payload, onResponse, onFail):
-        self.dest_addr = addr
+    def __init__(self, source_addr, dest_addr, uid, payload, onResponse, onFail):
+        self.source_addr = source_addr
+        self.dest_addr = dest_addr
         self.uid = uid
         self.payload = payload
         self.onResponse = onResponse
@@ -20,6 +21,7 @@ class RequestTimeoutThread(Thread):
     def __init__(self, client):
         Thread.__init__(self)
         self.client = client
+        self.daemon = True
 
     def run(self):
         while True:
@@ -81,7 +83,7 @@ class UDPClient:
 
     def send_request(self, payload, addr, onResponse, onFail):
         uid = UID(self.port)
-        self.pending_requests[uid.get_hash()] = UDPClientRequest(addr, uid, payload, onResponse, onFail)
+        self.pending_requests[uid.get_hash()] = UDPClientRequest(self.socket.getsockname(), addr, uid, payload, onResponse, onFail)
         self.sendTo(uid, payload, addr)
 
     def send_response(self, message, response):
