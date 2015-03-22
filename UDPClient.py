@@ -28,10 +28,12 @@ class RequestTimeoutThread(Thread):
             cur_time = time.time()
             for uid, request in self.client.pending_requests.items():
                 time_since_last_attempt = (cur_time - request.last_attempt_time) * 1000
+
                 if time_since_last_attempt > request.timeout:
                     if request.attempts >= UDPClient.MAX_RETRY_ATTEMPTS:
                         request.onFail(request)
                         del self.client.pending_requests[uid]
+                        continue
 
                     request.attempts += 1
                     request.timeout *= 2
@@ -61,6 +63,11 @@ class UDPClient:
     def receive(self):
         try:
             data, addr = self.socket.recvfrom(UDPClient.MAX_LENGTH)
+
+            if(addr == self.socket.getsockname()):
+                raise Exception("You are sending to yourself")
+                return None
+
             uid = UID.from_bytes(data)
             payload = data[UID.LENGTH:]
             message = Message(uid, payload, addr)
@@ -81,9 +88,10 @@ class UDPClient:
         except socket.error:
             pass
 
-    def send_request(self, payload, addr, onResponse, onFail):
+    def send_request(self, message, addr, onResponse, onFail):
         uid = UID(self.port)
-        self.pending_requests[uid.get_hash()] = UDPClientRequest(self.socket.getsockname(), addr, uid, payload, onResponse, onFail)
+        payload = message.payload
+        self.pending_requests[uid.get_hash()] = UDPClientRequest(message.sender_addr, addr, uid, payload, onResponse, onFail)
         self.sendTo(uid, payload, addr)
 
     def send_response(self, message, response):

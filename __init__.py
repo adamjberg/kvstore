@@ -42,7 +42,7 @@ def does_ip_match_mine(ip):
         return True
     return False
 
-def handle_put_request(request):
+def handle_put_request(message, request):
     if kvStore.put(request.key, request.value):
         response = SuccessResponse()
     else:
@@ -50,7 +50,7 @@ def handle_put_request(request):
     client.send_response(message, response)
     return None
 
-def handle_get_request(request):
+def handle_get_request(message, request):
     value = kvStore.get(request.key)
     if value:
         response = SuccessResponse(value)
@@ -59,7 +59,7 @@ def handle_get_request(request):
 
     client.send_response(message, response)
 
-def handle_remove_request(request):    
+def handle_remove_request(message, request):    
     if kvStore.remove(request.key):
         response = SuccessResponse()
     else:
@@ -67,16 +67,12 @@ def handle_remove_request(request):
 
     client.send_response(message, response)
 
-def handle_shutdown_request(request):
+def handle_shutdown_request(message, request):
     client.send_response(message, SuccessResponse())
     sys.exit()
 
 def handle_message(message):
-    try:
-        request = Request.from_bytes(message.payload)
-    except:
-        print "PARSE ERROR " + str(message.get_bytes())
-        return
+    request = Request.from_bytes(message.payload)
 
     if request.command == Request.SHUTDOWN:
         handle_shutdown_request(request)
@@ -85,18 +81,18 @@ def handle_message(message):
 
     if dest_node == my_node:
         if request.command == Request.PUT:
-            handle_put_request(request)
+            handle_put_request(message, request)
         elif request.command == Request.GET:
-            handle_get_request(request)
+            handle_get_request(message, request)
         elif request.command == Request.REMOVE:
-            handle_remove_request(request)
+            handle_remove_request(message, request)
         else:
             client.send_response(message, UnrecognizedCommandResponse())
     else:
         forward_request(message, dest_node)
 
 def forward_request(message, dest_node):
-    client.send_request(message.get_bytes(), (dest_node.ip, dest_node.port), forward_succeeded, forward_failed)
+    client.send_request(message, (dest_node.ip, dest_node.port), forward_succeeded, forward_failed)
 
 def forward_succeeded():
     print "SUCCESS"
@@ -107,7 +103,7 @@ def forward_failed(request):
             node.online = False
 
     uid = UID.from_bytes(request.payload)
-    payload = request.payload[UID.LENGTH * 2:]
+    payload = request.payload[UID.LENGTH:]
     message = Message(uid, payload, request.source_addr)
     handle_message(message)
 
