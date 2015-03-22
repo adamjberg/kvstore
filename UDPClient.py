@@ -45,7 +45,7 @@ class RequestTimeoutThread(Thread):
 
 class UDPClient:
     MAX_LENGTH = 65535
-    MAX_RETRY_ATTEMPTS = 3
+    MAX_RETRY_ATTEMPTS = 0
     MAX_CACHE_LENGTH = 1000
     DEFAULT_TIMEOUT_IN_MS = 100
     CACHE_EXPIRATION_TIME_SECONDS = 5
@@ -71,6 +71,7 @@ class UDPClient:
             uid = UID.from_bytes(data)
             payload = data[UID.LENGTH:]
             message = Message(uid, payload, addr)
+            print "RECI " + str(len(message.payload))
 
             uidHash = uid.get_hash()
 
@@ -88,11 +89,11 @@ class UDPClient:
         except socket.error:
             pass
 
-    def send_request(self, message, addr, onResponse, onFail):
+    def send_request(self, request, sender_addr, dest_addr, onResponse, onFail):
         uid = UID(self.port)
-        payload = message.payload
-        self.pending_requests[uid.get_hash()] = UDPClientRequest(message.sender_addr, addr, uid, payload, onResponse, onFail)
-        self.sendTo(uid, payload, addr)
+        payload = request.get_bytes()
+        self.pending_requests[uid.get_hash()] = UDPClientRequest(sender_addr, dest_addr, uid, payload, onResponse, onFail)
+        self.sendTo(uid, payload, dest_addr)
 
     def send_response(self, message, response):
         self.reply(message, response.get_bytes())
@@ -102,4 +103,4 @@ class UDPClient:
         self.sendTo(message.uid, payload, message.sender_addr)
 
     def sendTo(self, uid, payload, addr):
-        self.socket.sendto(uid.get_bytes() + str(payload), addr)
+        self.socket.sendto(uid.get_bytes() + payload, ("localhost", addr[1]))

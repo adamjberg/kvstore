@@ -1,6 +1,7 @@
 import hashlib
 import socket
 import sys
+import time
 from KVStore import KVStore
 from Message import Message
 from Node import Node
@@ -53,6 +54,7 @@ def handle_put_request(message, request):
 def handle_get_request(message, request):
     value = kvStore.get(request.key)
     if value:
+        print "SUCCESS"
         response = SuccessResponse(value)
     else:
         response = NonexistentKeyResponse()
@@ -74,37 +76,44 @@ def handle_shutdown_request(message, request):
 def handle_message(message):
     request = Request.from_bytes(message.payload)
 
-    if request.command == Request.SHUTDOWN:
+    if request is None:
+        client.send_response(message, UnrecognizedCommandResponse())
+        return
+
+    if request.command == ShutdownRequest.COMMAND:
         handle_shutdown_request(request)
 
     dest_node = get_responsible_node_for_key(request.key)
 
     if dest_node == my_node:
-        if request.command == Request.PUT:
+        if request.command == PutRequest.COMMAND:
             handle_put_request(message, request)
-        elif request.command == Request.GET:
+        elif request.command == GetRequest.COMMAND:
             handle_get_request(message, request)
-        elif request.command == Request.REMOVE:
+        elif request.command == RemoveRequest.COMMAND:
             handle_remove_request(message, request)
-        else:
-            client.send_response(message, UnrecognizedCommandResponse())
     else:
-        forward_request(message, dest_node)
+        forward_request(message, request, dest_node)
 
-def forward_request(message, dest_node):
-    client.send_request(message, (dest_node.ip, dest_node.port), forward_succeeded, forward_failed)
+def forward_request(message, original_request, dest_node):
+    request = ForwardedRequest(message.uid, message.sender_addr, original_request)
+    client.send_request(request, message.sender_addr, (dest_node.ip, dest_node.port), forward_succeeded, forward_failed)
 
 def forward_succeeded():
     print "SUCCESS"
 
-def forward_failed(request):
+def forward_failed(failed_udpclient_request):
     for node in nodes:
-        if node.ip == request.dest_addr[0] and node.port == request.dest_addr[1]:
+        if node.ip == failed_udpclient_request.dest_addr[0] \
+                and node.port == failed_udpclient_request.dest_addr[1]:
             node.online = False
 
-    uid = UID.from_bytes(request.payload)
-    payload = request.payload[UID.LENGTH:]
-    message = Message(uid, payload, request.source_addr)
+    failed_request = Request.from_bytes(failed_udpclient_request.payload)
+    original_request = failed_request.original_request
+
+    uid = failed_request.original_uid
+    payload = original_request.get_bytes()
+    message = Message(uid, payload, failed_request.return_addr)
     handle_message(message)
 
 def get_responsible_node_for_key(key):
@@ -136,3 +145,4 @@ if __name__ == "__main__":
         message = client.receive()
         if message:
             handle_message(message)
+        time.sleep(0.1)

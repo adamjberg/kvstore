@@ -6,6 +6,3 @@ class Message:
 
     def get_bytes(self):
         return self.uid.get_bytes() + str(self.payload)
-
-    def __str__(self):
-        return str(self.uid) + str(self.payload) + str(self.sender_addr)

@@ -24,7 +24,7 @@ class UID:
 
     @staticmethod
     def from_bytes(b):
-        if len(b) < UID.LENGTH:
+        if b is None or len(b) < UID.LENGTH:
             raise Exception("Invalid UID") 
 
         uid = UID();
