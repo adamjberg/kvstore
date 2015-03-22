@@ -1,3 +1,4 @@
+import sys
 import time
 from UDPClient import UDPClient
 from Response import *
@@ -30,8 +31,8 @@ def handle_remove_request(request):
     client.send_response(message, response)
 
 def handle_shutdown_request(request):
-    print "HANDLE SHUTDOWN"
-    return None
+    client.send_response(message, SuccessResponse())
+    sys.exit()
 
 def handle_message(message):
     request_handlers = {
