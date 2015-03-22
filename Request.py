@@ -43,7 +43,8 @@ class Request:
             return ShutdownRequest()
         elif command == ForwardedRequest.COMMAND:
             original_uid = UID.from_bytes(b[1:UID.LENGTH + 1])
-            ip = 0#socket.inet_ntoa(struct.pack("!I", b[UID.LENGTH + 1: UID.LENGTH + 1 + 4]))
+            ip = struct.unpack("<I", b[UID.LENGTH + 1: UID.LENGTH + 1 + 4])[0]
+            ip = socket.inet_ntoa(struct.pack("!I", ip))
             port = struct.unpack("<H", b[UID.LENGTH + 1 + 4:UID.LENGTH + 1 + 6])[0]
             return ForwardedRequest(original_uid, (ip, port), Request.from_bytes(b[UID.LENGTH + 1 + 6:]))
         else:

@@ -103,4 +103,4 @@ class UDPClient:
         self.sendTo(message.uid, payload, message.sender_addr)
 
     def sendTo(self, uid, payload, addr):
-        self.socket.sendto(uid.get_bytes() + payload, ("localhost", addr[1]))
+        self.socket.sendto(uid.get_bytes() + payload, addr)
