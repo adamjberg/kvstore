@@ -1,3 +1,4 @@
+from expiringdict import ExpiringDict
 import socket
 from UID import UID
 from Message import Message
@@ -10,13 +11,16 @@ class UDPClientRequest:
 
 class UDPClient:
     MAX_LENGTH = 65535
+    MAX_CACHE_LENGTH = 1000
+    CACHE_EXPIRATION_TIME_SECONDS = 5
+
     def __init__(self, port):
         self.port = port
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.bind(("localhost", self.port))
         self.socket.setblocking(False)
         self.pending_requests = dict()
-        self.cached_responses = dict()
+        self.response_cache = ExpiringDict(max_len = UDPClient.MAX_CACHE_LENGTH, max_age_seconds = UDPClient.CACHE_EXPIRATION_TIME_SECONDS)
 
     def receive(self):
         try:
@@ -25,13 +29,16 @@ class UDPClient:
             payload = data[UID.LENGTH:]
             message = Message(uid, payload, addr)
 
-            if str(uid) in self.cached_responses:
+            uidHash = uid.get_hash()
+
+            cached_response = self.response_cache.get(uidHash)
+            if cached_response:
                 print "CACHE"
-                self.reply(message, self.cached_responses[str(uid)])
+                self.reply(message, cached_response)
                 return None
 
-            if str(uid) in self.pending_requests:
-                onResponse = self.pending_requests[str(uid)].onResponse
+            if uidHash in self.pending_requests:
+                onResponse = self.pending_requests[uidHash].onResponse
                 if onResponse is not None and hasattr(onResponse, '__call__'):
                     onResponse(message.payload)
 
@@ -41,15 +48,15 @@ class UDPClient:
 
     def send_request(self, payload, addr, onResponse, onFail):
         uid = UID(self.port)
-        self.pending_requests[uid] = UDPClientRequest(payload, onResponse, onFail)
+        self.pending_requests[uid.get_hash()] = UDPClientRequest(payload, onResponse, onFail)
         self.sendTo(uid, payload, addr)
 
     def send_response(self, message, response):
         self.reply(message, response.get_bytes())
 
     def reply(self, message, payload):
-        self.cached_responses[str(message.uid)] = payload
+        self.response_cache[message.uid.get_hash()] = payload
         self.sendTo(message.uid, payload, message.sender_addr)
 
     def sendTo(self, uid, payload, addr):
-        self.socket.sendto(str(uid) + str(payload), addr)
+        self.socket.sendto(uid.get_bytes() + str(payload), addr)

@@ -13,7 +13,8 @@ def handle_put_request(request):
     return None
 
 def handle_get_request(request):
-    if kvStore.get(request.key):
+    value = kvStore.get(request.key)
+    if value:
         response = SuccessResponse(value)
     else:
         response = NonexistentKeyResponse()
