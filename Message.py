@@ -5,7 +5,7 @@ class Message:
         self.sender_addr = sender_addr
 
     def get_bytes(self):
-        return self.uid + self.payload
+        return str(self.uid) + str(self.payload)
 
     def __str__(self):
         return str(self.uid) + str(self.payload) + str(self.sender_addr)

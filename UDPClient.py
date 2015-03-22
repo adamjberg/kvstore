@@ -1,17 +1,49 @@
 from expiringdict import ExpiringDict
 import socket
+import time
+from threading import Thread
 from UID import UID
 from Message import Message
 
 class UDPClientRequest:
-    def __init__(self, payload, onResponse, onFail):
+    def __init__(self, addr, uid, payload, onResponse, onFail):
+        self.dest_addr = addr
+        self.uid = uid
         self.payload = payload
         self.onResponse = onResponse
         self.onFail = onFail
+        self.attempts = 0
+        self.timeout = UDPClient.DEFAULT_TIMEOUT_IN_MS
+        self.last_attempt_time = time.time()
+
+class RequestTimeoutThread(Thread):
+    def __init__(self, client):
+        Thread.__init__(self)
+        self.client = client
+
+    def run(self):
+        while True:
+            cur_time = time.time()
+            for uid, request in self.client.pending_requests.items():
+                time_since_last_attempt = (cur_time - request.last_attempt_time) * 1000
+                if time_since_last_attempt > request.timeout:
+                    if request.attempts >= UDPClient.MAX_RETRY_ATTEMPTS:
+                        request.onFail(request)
+                        del self.client.pending_requests[uid]
+
+                    request.attempts += 1
+                    request.timeout *= 2
+
+                    self.client.sendTo(request.uid, request.payload, request.dest_addr)
+                    request.last_attempt_time = cur_time
+
+            time.sleep(UDPClient.DEFAULT_TIMEOUT_IN_MS * 0.001)
 
 class UDPClient:
     MAX_LENGTH = 65535
+    MAX_RETRY_ATTEMPTS = 3
     MAX_CACHE_LENGTH = 1000
+    DEFAULT_TIMEOUT_IN_MS = 100
     CACHE_EXPIRATION_TIME_SECONDS = 5
 
     def __init__(self, port):
@@ -21,6 +53,8 @@ class UDPClient:
         self.socket.setblocking(False)
         self.pending_requests = dict()
         self.response_cache = ExpiringDict(max_len = UDPClient.MAX_CACHE_LENGTH, max_age_seconds = UDPClient.CACHE_EXPIRATION_TIME_SECONDS)
+        self.request_timeout_thread = RequestTimeoutThread(self)
+        self.request_timeout_thread.start()
 
     def receive(self):
         try:
@@ -33,7 +67,6 @@ class UDPClient:
 
             cached_response = self.response_cache.get(uidHash)
             if cached_response:
-                print "CACHE"
                 self.reply(message, cached_response)
                 return None
 
@@ -48,7 +81,7 @@ class UDPClient:
 
     def send_request(self, payload, addr, onResponse, onFail):
         uid = UID(self.port)
-        self.pending_requests[uid.get_hash()] = UDPClientRequest(payload, onResponse, onFail)
+        self.pending_requests[uid.get_hash()] = UDPClientRequest(addr, uid, payload, onResponse, onFail)
         self.sendTo(uid, payload, addr)
 
     def send_response(self, message, response):

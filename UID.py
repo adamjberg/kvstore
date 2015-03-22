@@ -7,10 +7,10 @@ import time
 class UID:
     LENGTH = 16
     def __init__(self, port = None):
-        self.ip = socket.inet_aton(socket.gethostbyname(socket.gethostname()))[0]
+        self.ip = struct.unpack("<I", socket.inet_aton(socket.gethostbyname(socket.gethostname())))[0]
         self.port = port
         self.random = random.getrandbits(16)
-        self.timestamp = time.time() * 1000
+        self.timestamp = int(round(time.time() * 1000))
 
     def get_hash(self):
         return hashlib.sha256(self.get_bytes()).hexdigest()

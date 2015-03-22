@@ -18,6 +18,9 @@ class Request:
         self.key = key
         self.value = value
 
+    def is_key_valid(self):
+        return len(self.key) == Request.KEY_LENGTH_BYTES
+
     def get_bytes(self):
         return struct.pack("<c32sH", self.command, self.key, len(self.value)) + value
 

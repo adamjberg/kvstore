@@ -1,6 +1,6 @@
+import hashlib
 import socket
 import sys
-import time
 from KVStore import KVStore
 from Node import Node
 from Response import *
@@ -16,6 +16,7 @@ def init_nodes_from_file():
 
 def init_client():
     global client;
+    global my_node;
     nodes_for_my_ip = []
     for node in nodes:
         ip = node.ip
@@ -25,9 +26,10 @@ def init_client():
     for node in nodes_for_my_ip:
         try:
             client = UDPClient(node.port)
+            my_node = node
             print "Connected on port: " + str(node.port)
             return True
-        except:
+        except socket.error:
             pass
     return False
 
@@ -68,27 +70,59 @@ def handle_shutdown_request(request):
     sys.exit()
 
 def handle_message(message):
-    request_handlers = {
-        Request.PUT: handle_put_request,
-        Request.GET: handle_get_request,
-        Request.REMOVE: handle_remove_request,
-        Request.SHUTDOWN: handle_shutdown_request
-    }
     request = Request.from_bytes(message.payload)
 
-    try:
-        request_handlers[request.command](request)
-    except:
-        client.send_response(message, UnrecognizedCommandResponse())
+    if request.command == Request.SHUTDOWN:
+        handle_shutdown_request(request)
+
+    dest_node = get_responsible_node_for_key(request.key)
+
+    if dest_node == my_node:
+        if request.command == Request.PUT:
+            handle_put_request(request)
+        elif request.command == Request.GET:
+            handle_get_request(request)
+        elif request.command == Request.REMOVE:
+            handle_remove_request(request)
+        else:
+            client.send_response(message, UnrecognizedCommandResponse())
+    else:
+        forward_request(request, dest_node)
+
+def forward_request(request, dest_node):
+    client.send_request(message.get_bytes(), (dest_node.ip, dest_node.port), forward_succeeded, forward_failed)
+
+def forward_succeeded():
+    print "SUCCESS"
+
+def forward_failed(request):
+    for node in nodes:
+        if node.ip == request.dest_addr[0] and node.port == request.dest_addr[1]:
+            node.online = False
+
+def get_responsible_node_for_key(key):
+    dest_node = nodes[-1]
+    location = get_location_for_key(key)
+    for node in nodes:
+        if node.online == False:
+            continue
+
+        if location >= node.location:
+            dest_node = node
+
+    return dest_node
+
+def get_location_for_key(key):
+    return struct.unpack('B', hashlib.sha256(key).digest()[0])[0]
 
 if __name__ == "__main__":
+    my_node = None
     nodes = []
     client = None
     init_nodes_from_file()
     if init_client() is False:
         print "Failed to bind to a port."
         sys.exit()
-
 
     kvStore = KVStore()
     while True:
