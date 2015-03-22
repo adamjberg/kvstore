@@ -73,11 +73,23 @@ def handle_shutdown_request(message, request):
     client.send_response(message, SuccessResponse())
     sys.exit()
 
+def handle_forward_request(request):
+    original_request = request.original_request
+
+    uid = request.original_uid
+    payload = original_request.get_bytes()
+    message = Message(uid, payload, request.return_addr)
+    handle_message(message)
+
 def handle_message(message):
     request = Request.from_bytes(message.payload)
 
     if request is None:
         client.send_response(message, UnrecognizedCommandResponse())
+        return
+
+    if isinstance(request,ForwardedRequest):
+        handle_forward_request(request)
         return
 
     if request.command == ShutdownRequest.COMMAND:
@@ -109,12 +121,7 @@ def forward_failed(failed_udpclient_request):
             node.online = False
 
     failed_request = Request.from_bytes(failed_udpclient_request.payload)
-    original_request = failed_request.original_request
-
-    uid = failed_request.original_uid
-    payload = original_request.get_bytes()
-    message = Message(uid, payload, failed_request.return_addr)
-    handle_message(message)
+    handle_forward_request(failed_request)
 
 def get_responsible_node_for_key(key):
     dest_node = nodes[-1]
