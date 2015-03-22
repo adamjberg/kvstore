@@ -75,7 +75,11 @@ def handle_message(message):
         Request.SHUTDOWN: handle_shutdown_request
     }
     request = Request.from_bytes(message.payload)
-    request_handlers[request.command](request)
+
+    try:
+        request_handlers[request.command](request)
+    except:
+        client.send_response(message, UnrecognizedCommandResponse())
 
 if __name__ == "__main__":
     nodes = []

@@ -26,3 +26,11 @@ class NonexistentKeyResponse(Response):
 class OutOfSpaceResponse(Response):
     def __init__(self):
         Response.__init__(self, OUT_OF_SPACE)
+
+class KeyValueStoreFailureResponse(Response):
+    def __init__(self):
+        Response.__init__(self, KV_STORE_FAILURE)
+
+class UnrecognizedCommandResponse(Response):
+    def __init__(self):
+        Response.__init__(self, UNRECOGNIZED_COMMAND)
