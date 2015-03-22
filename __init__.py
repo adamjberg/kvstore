@@ -1,9 +1,42 @@
+import socket
 import sys
 import time
-from UDPClient import UDPClient
+from KVStore import KVStore
+from Node import Node
 from Response import *
 from Request import *
-from KVStore import KVStore
+from UDPClient import UDPClient
+
+def init_nodes_from_file():
+    with open("hosts.txt") as f:
+        lines = [x.strip('\n') for x in f.readlines()]
+    for line in lines:
+        host, port, location = line.split(":")
+        nodes.append(Node(host, port, location))
+
+def init_client():
+    global client;
+    nodes_for_my_ip = []
+    for node in nodes:
+        ip = node.ip
+        if does_ip_match_mine(ip):
+            nodes_for_my_ip.append(node)
+
+    for node in nodes_for_my_ip:
+        try:
+            client = UDPClient(node.port)
+            print "Connected on port: " + str(node.port)
+            return True
+        except:
+            pass
+    return False
+
+def does_ip_match_mine(ip):
+    if ip.startswith("127.") or ip.startswith("localhost"):
+        return True
+    elif ip == socket.gethostbyname(socket.gethostname()):
+        return True
+    return False
 
 def handle_put_request(request):
     if kvStore.put(request.key, request.value):
@@ -45,7 +78,14 @@ def handle_message(message):
     request_handlers[request.command](request)
 
 if __name__ == "__main__":
-    client = UDPClient(12000)
+    nodes = []
+    client = None
+    init_nodes_from_file()
+    if init_client() is False:
+        print "Failed to bind to a port."
+        sys.exit()
+
+
     kvStore = KVStore()
     while True:
         message = client.receive()

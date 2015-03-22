@@ -1,5 +1,3 @@
-from Node import Node
-
 class KVStore:
     MAX_SPACE_AVAILABLE = 64 * 1024 * 1024
     MAX_NUM_KEYS = 100000
@@ -7,7 +5,6 @@ class KVStore:
     def __init__(self):
         self.space_available = KVStore.MAX_SPACE_AVAILABLE
         self.kv_dict = dict()
-        self.nodes = dict()
 
     def put(self, key, value):
         self.remove(key)
