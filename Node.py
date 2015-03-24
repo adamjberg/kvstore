@@ -7,3 +7,6 @@ class Node:
 
     def get_addr(self):
         return (self.ip, self.port)
+
+    def __str__(self):
+        return str(self.ip) + " " + str(self.port) + " " + str(self.location) + " " + str(self.online)
