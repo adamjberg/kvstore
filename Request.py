@@ -47,6 +47,8 @@ class Request:
             ip = socket.inet_ntoa(struct.pack("!I", ip))
             port = struct.unpack("<H", b[UID.LENGTH + 1 + 4:UID.LENGTH + 1 + 6])[0]
             return ForwardedRequest(original_uid, (ip, port), Request.from_bytes(b[UID.LENGTH + 1 + 6:]))
+        elif command == SetOnlineRequest.COMMAND:
+            return SetOnlineRequest()
         else:
             return None
 

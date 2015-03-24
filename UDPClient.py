@@ -17,6 +17,11 @@ class UDPClientRequest:
         self.timeout = UDPClient.DEFAULT_TIMEOUT_IN_MS
         self.last_attempt_time = time.time()
 
+    def reset(self):
+        self.attempts = 0
+        self.timeout = UDPClient.DEFAULT_TIMEOUT_IN_MS
+        self.last_attempt_time = 0
+
 class RequestTimeoutThread(Thread):
     def __init__(self, client):
         Thread.__init__(self)
@@ -101,7 +106,7 @@ class UDPClient:
                 successful_request = self.pending_requests[uidBytes]
                 onResponse = successful_request.onResponse
                 if onResponse is not None and hasattr(onResponse, '__call__'):
-                    onResponse(message.payload)
+                    onResponse(message)
                 self.handled_request_cache[uidBytes] = successful_request
                 del self.pending_requests[uidBytes]
 

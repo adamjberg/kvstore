@@ -88,6 +88,17 @@ def handle_incoming_forwarded_request(message, request):
     handle_message(Message(uid, payload, request.return_addr))
     handle_message(Message(message.uid, payload, message.sender_addr))
 
+def handle_set_online_request(message, request):
+    reset_pending_requests_for_addr(message.sender_addr)
+    set_node_online_with_addr(message.sender_addr, True)
+    client.send_response(message, SuccessResponse())
+
+def reset_pending_requests_for_addr(addr):
+    for uid, request in client.pending_requests.items():
+        if(request.dest_addr == addr):
+            request.reset()
+
+
 def handle_message(message):
     request = Request.from_bytes(message.payload)
 
@@ -101,6 +112,9 @@ def handle_message(message):
 
     if request.command == ShutdownRequest.COMMAND:
         handle_shutdown_request(request)
+    elif request.command == SetOnlineRequest.COMMAND:
+        handle_set_online_request(message, request)
+        return
 
     dest_node = get_responsible_node_for_key(request.key)
 
@@ -118,13 +132,12 @@ def forward_request(message, original_request, dest_node):
     request = ForwardedRequest(message.uid, message.sender_addr, original_request)
     client.send_request(request, message.sender_addr, (dest_node.ip, dest_node.port), forward_succeeded, forward_failed)
 
-def forward_succeeded(successful_udpclient_request):
+def forward_succeeded(message):
     pass
 
 def forward_failed(failed_udpclient_request):
     for node in nodes:
-        if node.ip == failed_udpclient_request.dest_addr[0] \
-                and node.port == failed_udpclient_request.dest_addr[1]:
+        if node.get_addr() == failed_udpclient_request.dest_addr:
             node.online = False
 
     failed_request = Request.from_bytes(failed_udpclient_request.payload)
@@ -160,16 +173,16 @@ def send_set_online_request(client):
         if node != my_node:
             client.send_request(request, my_node.get_addr(), node.get_addr(), set_online_success, set_online_failed)
 
-def set_online_success(request):
-    for node in nodes:
-        if node.get_addr() == request.dest_addr:
-            node.online = True
-            break
+def set_online_success(message):
+    set_node_online_with_addr(message.sender_addr, True)
 
 def set_online_failed(request):
+    set_node_online_with_addr(request.dest_addr, False)
+
+def set_node_online_with_addr(addr, online):
     for node in nodes:
-        if node.get_addr() == request.dest_addr:
-            node.online = False
+        if node.get_addr() == addr:
+            node.online = online
             break
 
 if __name__ == "__main__":
