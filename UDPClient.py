@@ -1,4 +1,4 @@
-from expiringdict import ExpiringDict
+from GenericCache.GenericCache import GenericCache
 import socket
 import time
 from threading import Thread
@@ -56,7 +56,7 @@ class RequestTimeoutThread(Thread):
     def fail_request(self, request):
         uid_bytes = request.uid.get_bytes()
         request.onFail(request)
-        self.client.handled_request_cache[uid_bytes] = request
+        self.client.handled_request_cache.insert(uid_bytes, request)
         del self.client.pending_requests[uid_bytes]  
 
 class UDPClient:
@@ -72,8 +72,8 @@ class UDPClient:
         self.socket.bind(("localhost", self.port))
         self.socket.setblocking(True)
         self.pending_requests = dict()
-        self.handled_request_cache = ExpiringDict(max_len = UDPClient.MAX_CACHE_LENGTH, max_age_seconds = UDPClient.CACHE_EXPIRATION_TIME_SECONDS)
-        self.response_cache = ExpiringDict(max_len = UDPClient.MAX_CACHE_LENGTH, max_age_seconds = UDPClient.CACHE_EXPIRATION_TIME_SECONDS)
+        self.handled_request_cache = GenericCache(UDPClient.MAX_CACHE_LENGTH, UDPClient.CACHE_EXPIRATION_TIME_SECONDS)
+        self.response_cache = GenericCache(UDPClient.MAX_CACHE_LENGTH, UDPClient.CACHE_EXPIRATION_TIME_SECONDS)
         self.request_timeout_thread = RequestTimeoutThread(self)
         self.request_timeout_thread.start()
 
@@ -97,7 +97,7 @@ class UDPClient:
             if uidBytes in self.handled_request_cache:
                 return None
 
-            cached_response = self.response_cache.get(uidBytes)
+            cached_response = self.response_cache.fetch(uidBytes)
             if cached_response:
                 self.reply(message, cached_response)
                 return None
@@ -107,7 +107,7 @@ class UDPClient:
                 onResponse = successful_request.onResponse
                 if onResponse is not None and hasattr(onResponse, '__call__'):
                     onResponse(message)
-                self.handled_request_cache[uidBytes] = successful_request
+                self.handled_request_cache.insert(uidBytes, successful_request)
                 del self.pending_requests[uidBytes]
 
                 return None
@@ -127,7 +127,7 @@ class UDPClient:
         self.reply(message, response.get_bytes())
 
     def reply(self, message, payload):
-        self.response_cache[message.uid.get_bytes()] = payload
+        self.response_cache.insert(message.uid.get_bytes(), payload)
         self.sendTo(message.uid, payload, message.sender_addr)
 
     def sendTo(self, uid, payload, addr):
