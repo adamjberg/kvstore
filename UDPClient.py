@@ -32,6 +32,7 @@ class RequestTimeoutThread(Thread):
                 if time_since_last_attempt > request.timeout:
                     if request.attempts >= UDPClient.MAX_RETRY_ATTEMPTS:
                         request.onFail(request)
+                        self.client.handled_request_cache[uid] = request
                         del self.client.pending_requests[uid]
                         continue
 
@@ -44,7 +45,7 @@ class RequestTimeoutThread(Thread):
             time.sleep(UDPClient.DEFAULT_TIMEOUT_IN_MS * 0.001)
 
 class UDPClient:
-    MAX_LENGTH = 65535
+    MAX_LENGTH = 16000
     MAX_RETRY_ATTEMPTS = 3
     MAX_CACHE_LENGTH = 1000
     DEFAULT_TIMEOUT_IN_MS = 100
@@ -56,6 +57,7 @@ class UDPClient:
         self.socket.bind(("localhost", self.port))
         self.socket.setblocking(False)
         self.pending_requests = dict()
+        self.handled_request_cache = ExpiringDict(max_len = UDPClient.MAX_CACHE_LENGTH, max_age_seconds = UDPClient.CACHE_EXPIRATION_TIME_SECONDS)
         self.response_cache = ExpiringDict(max_len = UDPClient.MAX_CACHE_LENGTH, max_age_seconds = UDPClient.CACHE_EXPIRATION_TIME_SECONDS)
         self.request_timeout_thread = RequestTimeoutThread(self)
         self.request_timeout_thread.start()
@@ -69,21 +71,31 @@ class UDPClient:
                 return None
 
             uid = UID.from_bytes(data)
+
+            if(int(round(time.time() * 1000)) - uid.timestamp > UDPClient.CACHE_EXPIRATION_TIME_SECONDS * 1000):
+                return None
+
             payload = data[UID.LENGTH:]
             message = Message(uid, payload, addr)
-            print "RECI " + str(len(message.payload))
+            uidBytes = uid.get_bytes()
 
-            uidHash = uid.get_hash()
+            if uidBytes in self.handled_request_cache:
+                return None
 
-            cached_response = self.response_cache.get(uidHash)
+            cached_response = self.response_cache.get(uidBytes)
             if cached_response:
                 self.reply(message, cached_response)
                 return None
 
-            if uidHash in self.pending_requests:
-                onResponse = self.pending_requests[uidHash].onResponse
+            if uidBytes in self.pending_requests:
+                successful_request = self.pending_requests[uidBytes]
+                onResponse = successful_request.onResponse
                 if onResponse is not None and hasattr(onResponse, '__call__'):
                     onResponse(message.payload)
+                self.handled_request_cache[uidBytes] = successful_request
+                del self.pending_requests[uidBytes]
+
+                return None
 
             return message
         except socket.error:
@@ -91,15 +103,16 @@ class UDPClient:
 
     def send_request(self, request, sender_addr, dest_addr, onResponse, onFail):
         uid = UID(self.port)
+
         payload = request.get_bytes()
-        self.pending_requests[uid.get_hash()] = UDPClientRequest(sender_addr, dest_addr, uid, payload, onResponse, onFail)
+        self.pending_requests[uid.get_bytes()] = UDPClientRequest(sender_addr, dest_addr, uid, payload, onResponse, onFail)
         self.sendTo(uid, payload, dest_addr)
 
     def send_response(self, message, response):
         self.reply(message, response.get_bytes())
 
     def reply(self, message, payload):
-        self.response_cache[message.uid.get_hash()] = payload
+        self.response_cache[message.uid.get_bytes()] = payload
         self.sendTo(message.uid, payload, message.sender_addr)
 
     def sendTo(self, uid, payload, addr):

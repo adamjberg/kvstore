@@ -85,7 +85,7 @@ class PutRequest(Request):
         self.value = value
 
     def get_bytes(self):
-        return Request.get_bytes(self) + struct.pack("<%dsH" % (Request.KEY_LENGTH_BYTES), self.key, len(self.value)) + value
+        return Request.get_bytes(self) + struct.pack("<%dsH" % (Request.KEY_LENGTH_BYTES), self.key, len(self.value)) + self.value
 
 class GetRequest(Request):
     COMMAND = chr(2)

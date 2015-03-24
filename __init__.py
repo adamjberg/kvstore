@@ -54,14 +54,13 @@ def handle_put_request(message, request):
 def handle_get_request(message, request):
     value = kvStore.get(request.key)
     if value:
-        print "SUCCESS"
         response = SuccessResponse(value)
     else:
         response = NonexistentKeyResponse()
 
     client.send_response(message, response)
 
-def handle_remove_request(message, request):    
+def handle_remove_request(message, request):
     if kvStore.remove(request.key):
         response = SuccessResponse()
     else:
@@ -73,13 +72,13 @@ def handle_shutdown_request(message, request):
     client.send_response(message, SuccessResponse())
     sys.exit()
 
-def handle_forward_request(request):
+def handle_incoming_forwarded_request(message, request):
     original_request = request.original_request
 
     uid = request.original_uid
     payload = original_request.get_bytes()
-    message = Message(uid, payload, request.return_addr)
-    handle_message(message)
+    handle_message(Message(uid, payload, request.return_addr))
+    handle_message(Message(message.uid, payload, message.sender_addr))
 
 def handle_message(message):
     request = Request.from_bytes(message.payload)
@@ -89,7 +88,7 @@ def handle_message(message):
         return
 
     if isinstance(request,ForwardedRequest):
-        handle_forward_request(request)
+        handle_incoming_forwarded_request(message, request)
         return
 
     if request.command == ShutdownRequest.COMMAND:
@@ -111,8 +110,8 @@ def forward_request(message, original_request, dest_node):
     request = ForwardedRequest(message.uid, message.sender_addr, original_request)
     client.send_request(request, message.sender_addr, (dest_node.ip, dest_node.port), forward_succeeded, forward_failed)
 
-def forward_succeeded():
-    print "SUCCESS"
+def forward_succeeded(successful_udpclient_request):
+    pass
 
 def forward_failed(failed_udpclient_request):
     for node in nodes:
@@ -121,10 +120,16 @@ def forward_failed(failed_udpclient_request):
             node.online = False
 
     failed_request = Request.from_bytes(failed_udpclient_request.payload)
-    handle_forward_request(failed_request)
+    original_request = failed_request.original_request
+
+    uid = failed_request.original_uid
+    payload = original_request.get_bytes()
+    message = Message(uid, payload, failed_request.return_addr)
+
+    handle_message(message)
 
 def get_responsible_node_for_key(key):
-    dest_node = nodes[-1]
+    dest_node = None
     location = get_location_for_key(key)
     for node in nodes:
         if node.online == False:
@@ -132,6 +137,9 @@ def get_responsible_node_for_key(key):
 
         if location >= node.location:
             dest_node = node
+
+    if dest_node is None:
+        dest_node = my_node
 
     return dest_node
 
@@ -152,4 +160,3 @@ if __name__ == "__main__":
         message = client.receive()
         if message:
             handle_message(message)
-        time.sleep(0.1)
