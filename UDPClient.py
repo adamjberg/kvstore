@@ -26,14 +26,13 @@ class RequestTimeoutThread(Thread):
     def run(self):
         while True:
             cur_time = time.time()
+            failed_dest_addresses = {}
             for uid, request in self.client.pending_requests.items():
                 time_since_last_attempt = (cur_time - request.last_attempt_time) * 1000
 
                 if time_since_last_attempt > request.timeout:
                     if request.attempts >= UDPClient.MAX_RETRY_ATTEMPTS:
-                        request.onFail(request)
-                        self.client.handled_request_cache[uid] = request
-                        del self.client.pending_requests[uid]
+                        failed_dest_addresses[request.dest_addr] = True
                         continue
 
                     request.attempts += 1
@@ -42,7 +41,18 @@ class RequestTimeoutThread(Thread):
                     self.client.sendTo(request.uid, request.payload, request.dest_addr)
                     request.last_attempt_time = cur_time
 
+            for addr in failed_dest_addresses:
+                for key, request in self.client.pending_requests.items():
+                    if request.dest_addr == addr:
+                        self.fail_request(request)
+
             time.sleep(UDPClient.DEFAULT_TIMEOUT_IN_MS * 0.001)
+
+    def fail_request(self, request):
+        uid_bytes = request.uid.get_bytes()
+        request.onFail(request)
+        self.client.handled_request_cache[uid_bytes] = request
+        del self.client.pending_requests[uid_bytes]  
 
 class UDPClient:
     MAX_LENGTH = 16000
