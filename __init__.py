@@ -42,6 +42,8 @@ def does_ip_match_mine(ip):
         return True
     elif ip == socket.gethostbyname(socket.gethostname()):
         return True
+    elif ip == socket.gethostname():
+        return True
     return False
 
 def handle_put_request(message, request):
