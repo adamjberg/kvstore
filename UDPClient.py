@@ -69,7 +69,7 @@ class UDPClient:
     def __init__(self, port):
         self.port = port
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.socket.bind(("localhost", self.port))
+        self.socket.bind(("", self.port))
         self.socket.setblocking(True)
         self.pending_requests = dict()
         self.handled_request_cache = GenericCache(UDPClient.MAX_CACHE_LENGTH, UDPClient.CACHE_EXPIRATION_TIME_SECONDS)
