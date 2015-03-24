@@ -154,16 +154,38 @@ def get_responsible_node_for_key(key):
 def get_location_for_key(key):
     return struct.unpack('B', hashlib.sha256(key).digest()[0])[0]
 
+def send_set_online_request(client):
+    request = SetOnlineRequest()
+    for node in nodes:
+        if node != my_node:
+            client.send_request(request, my_node.get_addr(), node.get_addr(), set_online_success, set_online_failed)
+
+def set_online_success(request):
+    for node in nodes:
+        if node.get_addr() == request.dest_addr:
+            node.online = True
+            break
+
+def set_online_failed(request):
+    for node in nodes:
+        if node.get_addr() == request.dest_addr:
+            node.online = False
+            break
+
 if __name__ == "__main__":
     my_node = None
     nodes = []
     client = None
     init_nodes_from_file()
+
     if init_client() is False:
         print "Failed to bind to a port."
         sys.exit()
 
     kvStore = KVStore()
+
+    send_set_online_request(client)
+
     while True:
         message = client.receive()
         if message:

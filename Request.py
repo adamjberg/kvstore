@@ -123,3 +123,10 @@ class ForwardedRequest(Request):
         self.original_uid.get_bytes() + \
         struct.pack("<IH", struct.unpack("!I", socket.inet_aton(self.return_addr[0]))[0], self.return_addr[1]) + \
         self.original_request.get_bytes()
+
+# Request to be marked as online
+# use when node comes back online
+class SetOnlineRequest(Request):
+    COMMAND = chr(21)
+    def __init__(self):
+        Request.__init__(self, SetOnlineRequest.COMMAND)
