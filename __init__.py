@@ -133,7 +133,7 @@ def handle_message(message):
 
 def forward_request(message, original_request, dest_node):
     request = ForwardedRequest(message.uid, message.sender_addr, original_request)
-    client.send_request(request, message.sender_addr, (dest_node.ip, dest_node.port), forward_succeeded, forward_failed)
+    client.send_request(request, dest_node.get_addr(), forward_succeeded, forward_failed)
 
 def forward_succeeded(message):
     pass
@@ -174,7 +174,7 @@ def send_set_online_request(client):
     request = SetOnlineRequest()
     for node in nodes:
         if node != my_node:
-            client.send_request(request, my_node.get_addr(), node.get_addr(), set_online_success, set_online_failed)
+            client.send_request(request, node.get_addr(), set_online_success, set_online_failed)
 
 def set_online_success(message):
     set_node_online_with_addr(message.sender_addr, True)

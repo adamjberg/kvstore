@@ -6,8 +6,7 @@ from UID import UID
 from Message import Message
 
 class UDPClientRequest:
-    def __init__(self, source_addr, dest_addr, uid, payload, onResponse, onFail):
-        self.source_addr = source_addr
+    def __init__(self, dest_addr, uid, payload, onResponse, onFail):
         self.dest_addr = dest_addr
         self.uid = uid
         self.payload = payload
@@ -116,11 +115,11 @@ class UDPClient:
         except socket.error:
             pass
 
-    def send_request(self, request, sender_addr, dest_addr, onResponse, onFail):
+    def send_request(self, request, dest_addr, onResponse, onFail):
         uid = UID(self.port)
 
         payload = request.get_bytes()
-        self.pending_requests[uid.get_bytes()] = UDPClientRequest(sender_addr, dest_addr, uid, payload, onResponse, onFail)
+        self.pending_requests[uid.get_bytes()] = UDPClientRequest(dest_addr, uid, payload, onResponse, onFail)
         self.sendTo(uid, payload, dest_addr)
 
     def send_response(self, message, response):
