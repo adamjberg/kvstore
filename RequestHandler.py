@@ -13,11 +13,11 @@ from UID import UID
 from RequestHandler import *
 
 class RequestHandler:
-    def __init__(self, client, kvStore, nodes, my_node):
+    def __init__(self, client, kvStore, node_circle):
         self.client = client
         self.kvStore = kvStore
-        self.nodes = nodes
-        self.my_node = my_node
+        self.node_circle = node_circle
+        self.my_node = node_circle.my_node
 
         self.handlers = {
             PutRequest.COMMAND: self.handle_put,
@@ -36,35 +36,17 @@ class RequestHandler:
     def handle_message(self, message):
         request = Request.from_bytes(message.payload)
         if request.command <= RemoveRequest.COMMAND:
-            dest_node = self.get_responsible_node_for_key(request.key)
+            dest_node = self.node_circle.get_responsible_node_for_key(request.key)
             if dest_node != self.my_node:
                 self.forward_request(message, request, dest_node)
                 return
 
         self.handlers[request.command](message, request)
 
-    def get_responsible_node_for_key(self, key):
-        dest_node = None
-        location = self.get_location_for_key(key)
-        for node in self.nodes:
-            if node.online == False:
-                continue
-
-            if location >= node.location:
-                dest_node = node
-
-        if dest_node is None:
-            dest_node = self.my_node
-
-        return dest_node
-
     def reset_pending_requests_for_addr(self, addr):
         for uid, request in self.client.pending_requests.items():
             if(request.dest_addr == addr):
                 request.reset()
-
-    def get_location_for_key(self, key):
-        return struct.unpack('B', hashlib.sha256(key).digest()[0])[0]
 
     def forward_request(self, message, original_request, dest_node):
         request = ForwardedRequest(message.uid, message.sender_addr, original_request)
