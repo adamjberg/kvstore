@@ -29,7 +29,7 @@ def init_client():
 
     for node in nodes_for_my_ip:
         try:
-            client = UDPClient(node.port)
+            client = UDPClient(node.port, handle_message)
             my_node = node
             print "Connected on port: " + str(node.port)
             return True
@@ -202,7 +202,3 @@ if __name__ == "__main__":
 
     send_set_online_request(client)
 
-    while True:
-        message = client.receive()
-        if message:
-            handle_message(message)
