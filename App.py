@@ -10,6 +10,7 @@ from Response import *
 from Request import *
 from UDPClient import UDPClient
 from UID import UID
+from RequestHandler import *
 
 class App:
 
@@ -22,8 +23,9 @@ class App:
             sys.exit()
 
         self.kvStore = KVStore()
-
+        self.request_handler = RequestHandler(self.client, self.kvStore, self.nodes, self.my_node)
         self.send_set_online_request()
+        self.client.run()
 
     def init_nodes_from_file(self):
         with open("hosts.txt") as f:
@@ -58,129 +60,13 @@ class App:
             return True
         elif ip == socket.gethostname():
             return True
-        return False
-
-    def handle_put_request(self, message, request):
-        if self.kvStore.put(request.key, request.value):
-            response = SuccessResponse()
-        else:
-            response = OutOfSpaceResponse()
-        self.client.send_response(message, response)
-        return None
-
-    def handle_get_request(self, message, request):
-        value = self.kvStore.get(request.key)
-        if value:
-            response = SuccessResponse(value)
-        else:
-            response = NonexistentKeyResponse()
-
-        self.client.send_response(message, response)
-
-    def handle_remove_request(self, message, request):
-        if self.kvStore.remove(request.key):
-            response = SuccessResponse()
-        else:
-            response = NonexistentKeyResponse()
-
-        self.client.send_response(message, response)
-
-    def handle_shutdown_request(self, message, request):
-        self.client.send_response(message, SuccessResponse())
-        sys.exit()
-
-    def handle_incoming_forwarded_request(self, message, request):
-        original_request = request.original_request
-
-        uid = request.original_uid
-        payload = original_request.get_bytes()
-        handle_message(Message(uid, payload, request.return_addr))
-        handle_message(Message(message.uid, payload, message.sender_addr))
-
-    def handle_set_online_request(self, message, request):
-        reset_pending_requests_for_addr(message.sender_addr)
-        set_node_online_with_addr(message.sender_addr, True)
-        self.client.send_response(message, SuccessResponse())
-
-    def reset_pending_requests_for_addr(self, addr):
-        for uid, request in self.client.pending_requests.items():
-            if(request.dest_addr == addr):
-                request.reset()
-
-
-    def handle_message(self, message):
-        request = Request.from_bytes(message.payload)
-
-        if request is None:
-            self.client.send_response(message, UnrecognizedCommandResponse())
-            return
-
-        if isinstance(request,ForwardedRequest):
-            handle_incoming_forwarded_request(message, request)
-            return
-
-        if request.command == ShutdownRequest.COMMAND:
-            handle_shutdown_request(request)
-        elif request.command == SetOnlineRequest.COMMAND:
-            handle_set_online_request(message, request)
-            return
-
-        dest_node = get_responsible_node_for_key(request.key)
-
-        if dest_node == my_node:
-            if request.command == PutRequest.COMMAND:
-                handle_put_request(message, request)
-            elif request.command == GetRequest.COMMAND:
-                handle_get_request(message, request)
-            elif request.command == RemoveRequest.COMMAND:
-                handle_remove_request(message, request)
-        else:
-            forward_request(message, request, dest_node)
-
-    def forward_request(self, message, original_request, dest_node):
-        request = ForwardedRequest(message.uid, message.sender_addr, original_request)
-        self.client.send_request(request, dest_node.get_addr(), forward_succeeded, forward_failed)
-
-    def forward_succeeded(self, message):
-        pass
-
-    def forward_failed(self, failed_udpclient_request):
-        for node in self.nodes:
-            if node.get_addr() == failed_udpclient_request.dest_addr:
-                node.online = False
-
-        failed_request = Request.from_bytes(failed_udpclient_request.payload)
-        original_request = failed_request.original_request
-
-        uid = failed_request.original_uid
-        payload = original_request.get_bytes()
-        message = Message(uid, payload, failed_request.return_addr)
-
-        handle_message(message)
-
-    def get_responsible_node_for_key(self, key):
-        dest_node = None
-        location = get_location_for_key(key)
-        for node in self.nodes:
-            if node.online == False:
-                continue
-
-            if location >= node.location:
-                dest_node = node
-
-        if dest_node is None:
-            dest_node = my_node
-
-        return dest_node
-
-    def get_location_for_key(self, key):
-        return struct.unpack('B', hashlib.sha256(key).digest()[0])[0]
+        return False  
 
     def send_set_online_request(self):
         request = SetOnlineRequest()
         for node in self.nodes:
             if node != self.my_node:
-                self.client.send_request(request, node.get_addr(), set_online_success, set_online_failed)
+                self.client.send_request(request, node.get_addr(), self.set_online_success, self.set_online_failed)
 
     def set_online_success(self, message):
         self.set_node_online_with_addr(message.sender_addr, True)
@@ -193,6 +79,9 @@ class App:
             if node.get_addr() == addr:
                 node.online = online
                 break
+
+    def handle_message(self, message):
+        self.request_handler.handle_message(message)
 
 if __name__ == "__main__":
     App()

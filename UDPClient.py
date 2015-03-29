@@ -45,6 +45,7 @@ class RequestTimeoutThread(Thread):
                     self.client.sendTo(request.uid, request.payload, request.dest_addr)
                     request.last_attempt_time = cur_time
 
+            failed_requests = []
             for addr in failed_dest_addresses:
                 for key, request in self.client.pending_requests.items():
                     if request.dest_addr == addr:
@@ -58,20 +59,11 @@ class RequestTimeoutThread(Thread):
         self.client.handled_request_cache.insert(uid_bytes, request)
         del self.client.pending_requests[uid_bytes]  
 
-class ReceiveThread(Thread):
-    def __init__(self, socket, received_data):
-        Thread.__init__(self)
-        self.socket = socket
-        self.received_data = received_data
-
-    def run(self):
-        while True:
-            self.received_data.append(self.socket.recvfrom(UDPClient.MAX_LENGTH))
-
 class MessageDispatcherThread(Thread):
     def __init__(self, client):
         Thread.__init__(self)
         self.client = client
+        self.daemon = True
 
     def run(self):
         while True:
@@ -83,19 +75,19 @@ class MessageDispatcherThread(Thread):
             uid = UID.from_bytes(data)
 
             if(int(round(time.time() * 1000)) - uid.timestamp > UDPClient.CACHE_EXPIRATION_TIME_SECONDS * 1000):
-                return None
+                continue
 
             payload = data[UID.LENGTH:]
             message = Message(uid, payload, addr)
             uidBytes = uid.get_bytes()
 
             if uidBytes in self.client.handled_request_cache:
-                return None
+                continue
 
             cached_response = self.client.response_cache.fetch(uidBytes)
             if cached_response:
                 self.reply(message, cached_response)
-                return None
+                continue
 
             if uidBytes in self.client.pending_requests:
                 successful_request = self.client.pending_requests[uidBytes]
@@ -104,8 +96,7 @@ class MessageDispatcherThread(Thread):
                     onResponse(message)
                 self.client.handled_request_cache.insert(uidBytes, successful_request)
                 del self.client.pending_requests[uidBytes]
-
-                return None
+                continue
 
             self.client.on_message_received(message)
 
@@ -133,11 +124,13 @@ class UDPClient:
         self.request_timeout_thread.start()
 
         self.received_data = []
-        self.receive_thread = ReceiveThread(self.socket, self.received_data)
-        self.receive_thread.start()
 
         self.message_dispatcher_thread = MessageDispatcherThread(self)
         self.message_dispatcher_thread.start()
+
+    def run(self):
+        while True:
+            self.received_data.append(self.socket.recvfrom(UDPClient.MAX_LENGTH))
 
     def send_request(self, request, dest_addr, onResponse, onFail):
         uid = UID(self.port)

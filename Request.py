@@ -41,6 +41,24 @@ class Request:
             return RemoveRequest(Request.get_key_from_bytes(b))
         elif command == ShutdownRequest.COMMAND:
             return ShutdownRequest()
+        elif command == InternalPutRequest.COMMAND:
+            key = Request.get_key_from_bytes(b)
+            value = Request.get_value_from_bytes(b)
+            return InternalPutRequest(key, value)
+        elif command == InternalGetRequest.COMMAND:
+            key = Request.get_key_from_bytes(b)
+            return InternalGetRequest(key)
+        elif command == InternalRemoveRequest.COMMAND:
+            key = Request.get_key_from_bytes(b)
+            return InternalRemoveRequest(key)
+        elif command == JoinRequest.COMMAND:
+            return JoinRequest()
+        elif command == SetOnlineRequest.COMMAND:
+            return SetOnlineRequest()
+        elif command == SetOnlineRequest.COMMAND:
+            return SetOnlineRequest()
+        elif command == PingRequest.COMMAND:
+            return PingRequest()
         elif command == ForwardedRequest.COMMAND:
             original_uid = UID.from_bytes(b[1:UID.LENGTH + 1])
             ip = struct.unpack("<I", b[UID.LENGTH + 1: UID.LENGTH + 1 + 4])[0]
@@ -50,7 +68,7 @@ class Request:
         elif command == SetOnlineRequest.COMMAND:
             return SetOnlineRequest()
         else:
-            return None
+            return UnrecognizedRequest()
 
     @staticmethod
     def get_key_from_bytes(b):
@@ -78,6 +96,11 @@ class Request:
                 return ""
         else:
             return ""
+
+class UnrecognizedRequest(Request):
+    COMMAND = chr(99)
+    def __init__(self):
+        Request.__init__(self, PutRequest.COMMAND)
 
 class PutRequest(Request):
     COMMAND = chr(1)
@@ -112,8 +135,47 @@ class ShutdownRequest(Request):
     def __init__(self):
         Request.__init__(self, ShutdownRequest.COMMAND)
 
+class InternalPutRequest(Request):
+    COMMAND = chr(41)
+    def __init__(self):
+        Request.__init__(self, InternalPutRequest.COMMAND)
+
+class InternalGetRequest(Request):
+    COMMAND = chr(42)
+    def __init__(self):
+        Request.__init__(self, InternalGetRequest.COMMAND)
+
+class InternalRemoveRequest(Request):
+    COMMAND = chr(43)
+    def __init__(self):
+        Request.__init__(self, InternalRemoveRequest.COMMAND)
+
+class JoinRequest(Request):
+    COMMAND = chr(44)
+    def __init__(self):
+        Request.__init__(self, JoinRequest.COMMAND)
+
+class SetOnlineRequest(Request):
+    COMMAND = chr(45)
+    def __init__(self):
+        Request.__init__(self, SetOnlineRequest.COMMAND)
+
+class SetOfflineRequest(Request):
+    COMMAND = chr(46)
+    def __init__(self, location):
+        Request.__init__(self, SetOfflineRequest.COMMAND)
+        self.location = location
+
+    def get_bytes(self):
+        return Request.get_bytes(self) + struct.pack("<I",self.location)
+
+class PingRequest(Request):
+    COMMAND = chr(47)
+    def __init__(self):
+        Request.__init__(self, PingRequest.COMMAND)
+
 class ForwardedRequest(Request):
-    COMMAND = chr(20)
+    COMMAND = chr(48)
     def __init__(self, original_uid, return_addr, request):
         Request.__init__(self, ForwardedRequest.COMMAND)
         self.original_uid = original_uid
@@ -125,10 +187,3 @@ class ForwardedRequest(Request):
         self.original_uid.get_bytes() + \
         struct.pack("<IH", struct.unpack("!I", socket.inet_aton(self.return_addr[0]))[0], self.return_addr[1]) + \
         self.original_request.get_bytes()
-
-# Request to be marked as online
-# use when node comes back online
-class SetOnlineRequest(Request):
-    COMMAND = chr(21)
-    def __init__(self):
-        Request.__init__(self, SetOnlineRequest.COMMAND)
