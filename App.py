@@ -92,14 +92,6 @@ class App:
     def handle_incoming_forwarded_request(self, message, request):
         original_request = request.original_request
 
-        # If someone forwarded this to us, the real destination is down
-        while  True:
-            down_node = get_responsible_node_for_key(original_request.key)
-            if down_node == my_node:
-                break
-
-            down_node.online = False
-
         uid = request.original_uid
         payload = original_request.get_bytes()
         handle_message(Message(uid, payload, request.return_addr))
