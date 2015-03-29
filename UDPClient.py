@@ -55,7 +55,10 @@ class RequestTimeoutThread(Thread):
 
     def fail_request(self, request):
         uid_bytes = request.uid.get_bytes()
-        request.onFail(request)
+
+        if request.onFail is not None and hasattr(request.onFail, '__call__'):
+            request.onFail(request)
+
         self.client.handled_request_cache.insert(uid_bytes, request)
         del self.client.pending_requests[uid_bytes]  
 
@@ -132,7 +135,7 @@ class UDPClient:
         while True:
             self.received_data.append(self.socket.recvfrom(UDPClient.MAX_LENGTH))
 
-    def send_request(self, request, dest_addr, onResponse, onFail):
+    def send_request(self, request, dest_addr, onResponse = None, onFail = None):
         uid = UID(self.port)
 
         payload = request.get_bytes()

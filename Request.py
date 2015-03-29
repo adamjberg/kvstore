@@ -55,8 +55,11 @@ class Request:
             return JoinRequest()
         elif command == SetOnlineRequest.COMMAND:
             return SetOnlineRequest()
-        elif command == SetOnlineRequest.COMMAND:
-            return SetOnlineRequest()
+        elif command == SetOfflineRequest.COMMAND:
+            ip = struct.unpack("<I", b[1:5])[0]
+            ip = socket.inet_ntoa(struct.pack("!I", ip))
+            port = struct.unpack("<H", b[5:])[0]
+            return SetOfflineRequest((ip, port))
         elif command == PingRequest.COMMAND:
             return PingRequest()
         elif command == ForwardedRequest.COMMAND:
@@ -65,8 +68,6 @@ class Request:
             ip = socket.inet_ntoa(struct.pack("!I", ip))
             port = struct.unpack("<H", b[UID.LENGTH + 1 + 4:UID.LENGTH + 1 + 6])[0]
             return ForwardedRequest(original_uid, (ip, port), Request.from_bytes(b[UID.LENGTH + 1 + 6:]))
-        elif command == SetOnlineRequest.COMMAND:
-            return SetOnlineRequest()
         else:
             return UnrecognizedRequest()
 
@@ -162,12 +163,12 @@ class SetOnlineRequest(Request):
 
 class SetOfflineRequest(Request):
     COMMAND = chr(46)
-    def __init__(self, location):
+    def __init__(self, addr):
         Request.__init__(self, SetOfflineRequest.COMMAND)
-        self.location = location
+        self.addr = addr
 
     def get_bytes(self):
-        return Request.get_bytes(self) + struct.pack("<I",self.location)
+        return Request.get_bytes(self) + struct.pack("<IH", struct.unpack("!I", socket.inet_aton(self.addr[0]))[0], self.addr[1])
 
 class PingRequest(Request):
     COMMAND = chr(47)

@@ -69,12 +69,6 @@ class RequestHandler:
 
         self.handle_message(message)
 
-    def set_node_online_with_addr(self, addr, online):
-        for node in self.nodes:
-            if node.get_addr() == addr:
-                node.online = online
-                break
-
     def handle_put(self, message, request):
         if self.kvStore.put(request.key, request.value):
             response = SuccessResponse()
@@ -108,11 +102,12 @@ class RequestHandler:
 
     def handle_set_online(self, message, request):
         self.reset_pending_requests_for_addr(message.sender_addr)
-        self.set_node_online_with_addr(message.sender_addr, True)
+        self.node_circle.set_node_online_with_addr(message.sender_addr, True)
         self.client.send_response(message, SuccessResponse())
 
     def handle_set_offline(self, message, request):
-        pass
+        self.node_circle.set_node_online_with_addr(request.addr, False)
+        self.client.send_response(message, SuccessResponse())
 
     def handle_ping(self, message, request):
         self.client.send_response(message, SuccessResponse())

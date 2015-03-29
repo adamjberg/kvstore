@@ -22,11 +22,14 @@ class NodeCircle:
         self.my_node = my_node
         self.nodes.remove(my_node)
 
-    def set_node_online_with_addr(self, addr, online):
+    def get_node_with_addr(self, addr):
         for node in self.nodes:
             if node.get_addr() == addr:
-                node.online = online
-                break
+                return node
+
+    def set_node_online_with_addr(self, addr, online):
+        node = self.get_node_with_addr(addr)
+        node.online = online
 
     def get_responsible_node_for_key(self, key):
         dest_node = None
@@ -44,5 +47,16 @@ class NodeCircle:
         return struct.unpack('B', hashlib.sha256(key).digest()[0])[0]
 
     def get_predecessor(self):
+        online_nodes = self.get_online_nodes()
+        predecessor = online_nodes[online_nodes.index(self.my_node) - 1]
+        if predecessor != self.my_node:
+            return predecessor
+
+        return None
+    
+    def get_online_nodes(self):
+        online_nodes = []
         for node in self.all_nodes:
-            predecessor = node
+            if node.online:
+                online_nodes.append(node)
+        return online_nodes
