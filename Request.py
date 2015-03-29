@@ -53,6 +53,8 @@ class Request:
             return InternalRemoveRequest(key)
         elif command == JoinRequest.COMMAND:
             return JoinRequest()
+        elif command == JoinSuccessRequest.COMMAND:
+            return JoinSuccessRequest()
         elif command == SetOnlineRequest.COMMAND:
             return SetOnlineRequest()
         elif command == SetOfflineRequest.COMMAND:
@@ -156,13 +158,18 @@ class JoinRequest(Request):
     def __init__(self):
         Request.__init__(self, JoinRequest.COMMAND)
 
-class SetOnlineRequest(Request):
+class JoinSuccessRequest(Request):
     COMMAND = chr(45)
+    def __init__(self):
+        Request.__init__(self, JoinSuccessRequest.COMMAND)
+
+class SetOnlineRequest(Request):
+    COMMAND = chr(46)
     def __init__(self):
         Request.__init__(self, SetOnlineRequest.COMMAND)
 
 class SetOfflineRequest(Request):
-    COMMAND = chr(46)
+    COMMAND = chr(47)
     def __init__(self, addr):
         Request.__init__(self, SetOfflineRequest.COMMAND)
         self.addr = addr
@@ -171,12 +178,12 @@ class SetOfflineRequest(Request):
         return Request.get_bytes(self) + struct.pack("<IH", struct.unpack("!I", socket.inet_aton(self.addr[0]))[0], self.addr[1])
 
 class PingRequest(Request):
-    COMMAND = chr(47)
+    COMMAND = chr(48)
     def __init__(self):
         Request.__init__(self, PingRequest.COMMAND)
 
 class ForwardedRequest(Request):
-    COMMAND = chr(48)
+    COMMAND = chr(49)
     def __init__(self, original_uid, return_addr, request):
         Request.__init__(self, ForwardedRequest.COMMAND)
         self.original_uid = original_uid

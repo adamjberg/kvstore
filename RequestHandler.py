@@ -11,6 +11,8 @@ from Request import *
 from UDPClient import UDPClient
 from UID import UID
 from RequestHandler import *
+from HandleJoinThread import *
+from MonitorNodeThread import *
 
 class RequestHandler:
     def __init__(self, client, kvStore, node_circle):
@@ -27,6 +29,7 @@ class RequestHandler:
             InternalGetRequest.COMMAND: self.handle_get,
             InternalRemoveRequest.COMMAND: self.handle_remove,
             JoinRequest.COMMAND: self.handle_join,
+            JoinSuccessRequest.COMMAND: self.handle_join_success,
             SetOnlineRequest.COMMAND: self.handle_set_online,
             SetOfflineRequest.COMMAND: self.handle_set_offline,
             PingRequest.COMMAND: self.handle_ping,
@@ -36,7 +39,7 @@ class RequestHandler:
     def handle_message(self, message):
         request = Request.from_bytes(message.payload)
         if request.command <= RemoveRequest.COMMAND:
-            dest_node = self.node_circle.get_responsible_node_for_key(request.key)
+            dest_node = self.node_circle.get_master_node_for_key(request.key)
             if dest_node != self.my_node:
                 self.forward_request(message, request, dest_node)
                 return
@@ -56,9 +59,7 @@ class RequestHandler:
         pass
 
     def forward_failed(self, failed_udpclient_request):
-        for node in self.nodes:
-            if node.get_addr() == failed_udpclient_request.dest_addr:
-                node.online = False
+        self.node_circle.set_node_online_with_addr(failed_udpclient_request.dest_addr, False)
 
         failed_request = Request.from_bytes(failed_udpclient_request.payload)
         original_request = failed_request.original_request
@@ -98,7 +99,29 @@ class RequestHandler:
         sys.exit()
 
     def handle_join(self, message, request):
-        pass
+        self.client.send_response(message, SuccessResponse())
+
+        node = self.node_circle.get_node_with_addr(message.sender_addr)
+
+        handle_join_thread = HandleJoinThread(self.client, self.node_circle, node, self.kvStore)
+        handle_join_thread.start()
+
+    def handle_join_success(self, message, request):
+        self.client.send_response(message, SuccessResponse())
+        self.send_set_online_request()
+        monitor_node_thread = MonitorNodeThread(self.client, self.node_circle)
+        monitor_node_thread.start()
+
+    def send_set_online_request(self):
+        request = SetOnlineRequest()
+        for node in self.node_circle.nodes:
+            self.client.send_request(request, node.get_addr(), self.set_online_success, self.set_online_failed)
+
+    def set_online_success(self, message):
+        self.node_circle.set_node_online_with_addr(message.sender_addr, True)
+
+    def set_online_failed(self, request):
+        self.node_circle.set_node_online_with_addr(request.dest_addr, False)
 
     def handle_set_online(self, message, request):
         self.reset_pending_requests_for_addr(message.sender_addr)

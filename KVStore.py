@@ -26,3 +26,7 @@ class KVStore:
             self.space_available += len(value)
 
         return value is not None
+
+    def print_keys(self):
+        for key in self.kv_dict:
+            print key

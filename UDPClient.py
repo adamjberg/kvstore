@@ -89,7 +89,7 @@ class MessageDispatcherThread(Thread):
 
             cached_response = self.client.response_cache.fetch(uidBytes)
             if cached_response:
-                self.reply(message, cached_response)
+                self.client.reply(message, cached_response)
                 continue
 
             if uidBytes in self.client.pending_requests:

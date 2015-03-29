@@ -5,7 +5,6 @@ from Request import *
 from UDPClient import UDPClient
 from RequestHandler import *
 from NodeCircle import *
-from MonitorNodeThread import *
 
 class App:
 
@@ -18,9 +17,9 @@ class App:
 
         self.kvStore = KVStore()
         self.request_handler = RequestHandler(self.client, self.kvStore, self.node_circle)
-        self.send_set_online_request()
-        self.monitor_node_thread = MonitorNodeThread(self.client, self.node_circle)
-        self.monitor_node_thread.start()
+        
+        self.send_join_request()
+
         self.client.run()
 
     def init_client(self):
@@ -51,16 +50,18 @@ class App:
             return True
         return False  
 
-    def send_set_online_request(self):
-        request = SetOnlineRequest()
-        for node in self.node_circle.nodes:
-            self.client.send_request(request, node.get_addr(), self.set_online_success, self.set_online_failed)
+    def send_join_request(self):
+        request = JoinRequest()
+        successor = self.node_circle.get_successor()
+        if successor:
+            self.client.send_request(request, successor.get_addr(), None, self.join_request_failed)
+        else:
+            monitor_node_thread = MonitorNodeThread(self.client, self.node_circle)
+            monitor_node_thread.start()
 
-    def set_online_success(self, message):
-        self.node_circle.set_node_online_with_addr(message.sender_addr, True)
-
-    def set_online_failed(self, request):
+    def join_request_failed(self, request):
         self.node_circle.set_node_online_with_addr(request.dest_addr, False)
+        self.send_join_request()
 
     def handle_message(self, message):
         self.request_handler.handle_message(message)

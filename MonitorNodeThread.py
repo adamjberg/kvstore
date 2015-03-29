@@ -14,7 +14,7 @@ class MonitorNodeThread(Thread):
     def run(self):
         while True:
             self.ping_predecessor()
-            time.sleep(MONITOR_DELAY_SECONDS)
+            time.sleep(MonitorNodeThread.MONITOR_DELAY_SECONDS)
 
     def ping_predecessor(self):
         predecessor = self.node_circle.get_predecessor()

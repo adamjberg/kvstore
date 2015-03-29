@@ -4,6 +4,8 @@ import struct
 from Node import Node
 
 class NodeCircle:
+    NUM_REPLICA_NODES = 2
+
     def __init__(self):
         self.all_nodes = []
         self.nodes = []
@@ -31,7 +33,21 @@ class NodeCircle:
         node = self.get_node_with_addr(addr)
         node.online = online
 
-    def get_responsible_node_for_key(self, key):
+    def is_my_node_responsible_for_key(self, key):
+        nodes_for_key = self.get_nodes_for_key(key)
+        return self.my_node in nodes_for_key
+
+    def get_nodes_for_key(self, key):
+        nodes = []
+        master_node = self.get_master_node_for_key(key)
+        nodes.append(master_node)
+
+        for i in range(NodeCircle.NUM_REPLICA_NODES):
+            nodes.append( self.get_predecessor_for_node(nodes[i]) )
+
+        return nodes
+
+    def get_master_node_for_key(self, key):
         dest_node = None
         location = self.get_location_for_key(key)
         for node in self.all_nodes:
@@ -47,13 +63,27 @@ class NodeCircle:
         return struct.unpack('B', hashlib.sha256(key).digest()[0])[0]
 
     def get_predecessor(self):
+        return self.get_predecessor_for_node(self.my_node)
+
+    def get_predecessor_for_node(self, node):
         online_nodes = self.get_online_nodes()
-        predecessor = online_nodes[online_nodes.index(self.my_node) - 1]
-        if predecessor != self.my_node:
+        predecessor = online_nodes[online_nodes.index(node) - 1]
+        if predecessor != node:
             return predecessor
 
         return None
-    
+
+    def get_successor(self):
+        return self.get_successor_for_node(self.my_node)
+
+    def get_successor_for_node(self, node):
+        online_nodes = self.get_online_nodes()
+        successor = online_nodes[online_nodes.index(node) - len(online_nodes) + 1]
+        if successor != node:
+            return successor
+
+        return None
+
     def get_online_nodes(self):
         online_nodes = []
         for node in self.all_nodes:
