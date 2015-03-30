@@ -14,18 +14,15 @@ class HandleJoinThread(Thread):
         # temporarily set the node online so that get_master_node_for_key will be correct
         self.node.online = True
         requests = []
-        for key, value in self.kvStore.kv_dict.items():
-            # If this key is for me, don't pass it along
-            if self.node_circle.get_master_node_for_key(key) == self.node_circle.my_node:
-                continue
 
+        # TODO: This will send replicas to the joining node that it doesn't need
+        for key, value in self.kvStore.kv_dict.items():
             requests.append(InternalPutRequest(key, value))
         self.node.online = False
         
         if len(requests) > 0:
             self.num_pending_requests = len(requests)
             for request in requests:
-                print "PUT from join"
                 self.client.send_request(request, self.node.get_addr(), self.put_success)
         else:
             self.send_successful_join()

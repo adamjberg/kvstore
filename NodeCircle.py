@@ -37,11 +37,12 @@ class NodeCircle:
         nodes_for_key = self.get_nodes_for_key(key)
         return self.my_node in nodes_for_key
 
-    def get_nodes_for_key(self, key):
-        nodes = []
-        master_node = self.get_master_node_for_key(key)
-        nodes.append(master_node)
+    def get_replica_nodes(self):
+        return self.get_replica_nodes_for_master(self.my_node)
 
+    def get_replica_nodes_for_master(self, master):
+        nodes = []
+        nodes.append(master)
         for i in range(NodeCircle.NUM_REPLICA_NODES):
             successor = self.get_successor_for_node(nodes[i])
             if successor:
@@ -51,6 +52,10 @@ class NodeCircle:
 
         return nodes
 
+    def get_nodes_for_key(self, key):
+        master_node = self.get_master_node_for_key(key)
+        return self.get_replica_nodes_for_master(master_node)
+
     def get_master_node_for_key(self, key):
         dest_node = None
         location = self.get_location_for_key(key)
@@ -58,8 +63,12 @@ class NodeCircle:
             if node.online == False:
                 continue
 
-            if dest_node is None or node.location >= location:
+            if dest_node is None:
                 dest_node = node
+
+            if node.location >= location:
+                dest_node = node
+                break
 
         return dest_node
 

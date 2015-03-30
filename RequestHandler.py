@@ -128,7 +128,19 @@ class RequestHandler:
 
     def handle_set_offline(self, message, request):
         down_node = self.node_circle.get_node_with_addr(request.addr)
+
+        replica_nodes = self.node_circle.get_replica_nodes()
+
         down_node.online = False
+        node_to_replicate_to = self.node_circle.get_last_replica()
+
+        # If the down node was a replica node of this node, replicate to your
+        # furthest replica node
+        if down_node in replica_nodes and node_to_replicate_to:
+            for key, value in self.kvStore.kv_dict.items():
+                if self.node_circle.get_master_node_for_key(key) == self.node_circle.my_node:
+                    # For now ignore the response
+                    self.client.send_request(InternalPutRequest(key,value), node_to_replicate_to.get_addr())
 
         self.client.send_response(message, SuccessResponse())        
 
@@ -141,6 +153,7 @@ class RequestHandler:
         uid = request.original_uid
         payload = original_request.get_bytes()
         self.handle_message(Message(uid, payload, request.return_addr))
+        self.client.send_response(Message(message.uid, payload, message.sender_addr), SuccessResponse())
 
     def handle_unrecognized(self, message, resquest):
         self.client.send_response(message, UnrecognizedCommandResponse())

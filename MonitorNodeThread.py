@@ -24,23 +24,20 @@ class MonitorNodeThread(Thread):
             self.client.send_request(request, predecessor.get_addr(), None, self.ping_failed)
 
     def ping_failed(self, request):
-        node = self.node_circle.get_node_with_addr(request.dest_addr)
+        down_node = self.node_circle.get_node_with_addr(request.dest_addr)
 
-        request = SetOfflineRequest(node.get_addr())
+        request = SetOfflineRequest(down_node.get_addr())
         for node in self.node_circle.get_online_nodes():
             self.client.send_request(request, node.get_addr())
 
         last_replica_node = self.node_circle.get_last_replica()
 
-        if last_replica_node is None:
-            return
+        if last_replica_node:
+            for key, value in self.kvStore.kv_dict.items():
+                if self.node_circle.get_master_node_for_key(key) == down_node:
+                    # For now ignore the response
+                    self.client.send_request(InternalPutRequest(key,value), last_replica_node.get_addr())
 
-        print "DOWNN " + str(node.online)
-        for key, value in self.kvStore.kv_dict.items():
-            if self.node_circle.get_master_node_for_key(key) == node:
-                print "REPLICATE " + str(key)
-                # For now ignore the response
-                self.client.send_request(InternalPutRequest(key,value), last_replica_node.get_addr())
+        down_node.online = False
 
-        node.online = False
 
