@@ -53,22 +53,7 @@ class RequestHandler:
 
     def forward_request(self, message, original_request, dest_node):
         request = ForwardedRequest(message.uid, message.sender_addr, original_request)
-        self.client.send_request(request, dest_node.get_addr(), self.forward_succeeded, self.forward_failed)
-
-    def forward_succeeded(self, message):
-        pass
-
-    def forward_failed(self, failed_udpclient_request):
-        self.node_circle.set_node_online_with_addr(failed_udpclient_request.dest_addr, False)
-
-        failed_request = Request.from_bytes(failed_udpclient_request.payload)
-        original_request = failed_request.original_request
-
-        uid = failed_request.original_uid
-        payload = original_request.get_bytes()
-        message = Message(uid, payload, failed_request.return_addr)
-
-        self.handle_message(message)
+        self.client.send_request(request, dest_node.get_addr())
 
     def handle_put(self, message, request):
         if self.kvStore.put(request.key, request.value):
@@ -143,6 +128,7 @@ class RequestHandler:
 
     def handle_set_offline(self, message, request):
         down_node = self.node_circle.get_node_with_addr(request.addr)
+        down_node.online = False
 
         self.client.send_response(message, SuccessResponse())        
 
@@ -155,7 +141,6 @@ class RequestHandler:
         uid = request.original_uid
         payload = original_request.get_bytes()
         self.handle_message(Message(uid, payload, request.return_addr))
-        self.handle_message(Message(message.uid, payload, message.sender_addr))
 
     def handle_unrecognized(self, message, resquest):
         self.client.send_response(message, UnrecognizedCommandResponse())
