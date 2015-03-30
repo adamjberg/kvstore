@@ -5,11 +5,12 @@ from Request import *
 class MonitorNodeThread(Thread):
     MONITOR_DELAY_SECONDS = 5
 
-    def __init__(self, client, node_circle):
+    def __init__(self, client, node_circle, kvStore):
         Thread.__init__(self)
         self.daemon = True
         self.client = client
         self.node_circle = node_circle
+        self.kvStore = kvStore
 
     def run(self):
         while True:
@@ -24,7 +25,22 @@ class MonitorNodeThread(Thread):
 
     def ping_failed(self, request):
         node = self.node_circle.get_node_with_addr(request.dest_addr)
-        node.online = False
+
         request = SetOfflineRequest(node.get_addr())
         for node in self.node_circle.get_online_nodes():
             self.client.send_request(request, node.get_addr())
+
+        last_replica_node = self.node_circle.get_last_replica()
+
+        if last_replica_node is None:
+            return
+
+        print "DOWNN " + str(node.online)
+        for key, value in self.kvStore.kv_dict.items():
+            if self.node_circle.get_master_node_for_key(key) == node:
+                print "REPLICATE " + str(key)
+                # For now ignore the response
+                self.client.send_request(InternalPutRequest(key,value), last_replica_node.get_addr())
+
+        node.online = False
+

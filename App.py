@@ -56,7 +56,7 @@ class App:
         if successor:
             self.client.send_request(request, successor.get_addr(), None, self.join_request_failed)
         else:
-            monitor_node_thread = MonitorNodeThread(self.client, self.node_circle)
+            monitor_node_thread = MonitorNodeThread(self.client, self.node_circle, self.kvStore)
             monitor_node_thread.start()
 
     def join_request_failed(self, request):

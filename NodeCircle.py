@@ -43,7 +43,11 @@ class NodeCircle:
         nodes.append(master_node)
 
         for i in range(NodeCircle.NUM_REPLICA_NODES):
-            nodes.append( self.get_predecessor_for_node(nodes[i]) )
+            successor = self.get_successor_for_node(nodes[i])
+            if successor:
+                nodes.append( successor )
+            else:
+                break
 
         return nodes
 
@@ -82,6 +86,19 @@ class NodeCircle:
         if successor != node:
             return successor
 
+        return None
+
+    def get_last_replica(self):
+        return self.get_last_replica_for_node(self.my_node)
+
+    def get_last_replica_for_node(self, node):
+        successor = node
+        for i in range(NodeCircle.NUM_REPLICA_NODES):
+            successor = self.get_successor_for_node(successor)
+            if successor == None:
+                return None
+        if successor != node:
+            return successor
         return None
 
     def get_online_nodes(self):

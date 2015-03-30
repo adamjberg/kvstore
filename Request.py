@@ -138,20 +138,23 @@ class ShutdownRequest(Request):
     def __init__(self):
         Request.__init__(self, ShutdownRequest.COMMAND)
 
-class InternalPutRequest(Request):
+class InternalPutRequest(PutRequest):
     COMMAND = chr(41)
-    def __init__(self):
-        Request.__init__(self, InternalPutRequest.COMMAND)
+    def __init__(self, key, value):
+        PutRequest.__init__(self, key, value)
+        self.command = InternalPutRequest.COMMAND
 
-class InternalGetRequest(Request):
+class InternalGetRequest(GetRequest):
     COMMAND = chr(42)
-    def __init__(self):
-        Request.__init__(self, InternalGetRequest.COMMAND)
+    def __init__(self, key):
+        GetRequest.__init__(self, key)
+        self.command = InternalGetRequest.COMMAND
 
-class InternalRemoveRequest(Request):
+class InternalRemoveRequest(RemoveRequest):
     COMMAND = chr(43)
-    def __init__(self):
-        Request.__init__(self, InternalRemoveRequest.COMMAND)
+    def __init__(self, key):
+        RemoveRequest.__init__(self, key)
+        self.command = InternalRemoveRequest.COMMAND
 
 class JoinRequest(Request):
     COMMAND = chr(44)

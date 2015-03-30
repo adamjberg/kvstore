@@ -75,7 +75,11 @@ class RequestHandler:
             response = SuccessResponse()
         else:
             response = OutOfSpaceResponse()
+
         self.client.send_response(message, response)
+
+        if request.command == PutRequest.COMMAND:
+            self.replicate_request(InternalPutRequest(request.key, request.value))
 
     def handle_get(self, message, request):
         value = self.kvStore.get(request.key)
@@ -93,6 +97,15 @@ class RequestHandler:
             response = NonexistentKeyResponse()
 
         self.client.send_response(message, response)
+        
+        if request.command == RemoveRequest.COMMAND:
+            self.replicate_request(InternalRemoveRequest(request.key))
+
+    # Pass on the requests, don't worry about success or failure
+    def replicate_request(self, request):
+        for node in self.node_circle.get_nodes_for_key(request.key):
+            if node != self.node_circle.my_node:
+                self.client.send_request(request, node.get_addr())
 
     def handle_shutdown(self, message, request):
         self.client.send_response(message, SuccessResponse())
@@ -109,7 +122,7 @@ class RequestHandler:
     def handle_join_success(self, message, request):
         self.client.send_response(message, SuccessResponse())
         self.send_set_online_request()
-        monitor_node_thread = MonitorNodeThread(self.client, self.node_circle)
+        monitor_node_thread = MonitorNodeThread(self.client, self.node_circle, self.kvStore)
         monitor_node_thread.start()
 
     def send_set_online_request(self):
@@ -129,8 +142,9 @@ class RequestHandler:
         self.client.send_response(message, SuccessResponse())
 
     def handle_set_offline(self, message, request):
-        self.node_circle.set_node_online_with_addr(request.addr, False)
-        self.client.send_response(message, SuccessResponse())
+        down_node = self.node_circle.get_node_with_addr(request.addr)
+
+        self.client.send_response(message, SuccessResponse())        
 
     def handle_ping(self, message, request):
         self.client.send_response(message, SuccessResponse())

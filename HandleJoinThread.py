@@ -19,12 +19,13 @@ class HandleJoinThread(Thread):
             if self.node_circle.get_master_node_for_key(key) == self.node_circle.my_node:
                 continue
 
-            requests.append(PutRequest(key, value))
+            requests.append(InternalPutRequest(key, value))
         self.node.online = False
         
         if len(requests) > 0:
             self.num_pending_requests = len(requests)
             for request in requests:
+                print "PUT from join"
                 self.client.send_request(request, self.node.get_addr(), self.put_success)
         else:
             self.send_successful_join()
@@ -49,6 +50,4 @@ class HandleJoinThread(Thread):
         for key, value in self.kvStore.kv_dict.items():
             if self.node_circle.is_my_node_responsible_for_key(key):
                 continue
-
             self.kvStore.remove(key)
-        self.kvStore.print_keys()
