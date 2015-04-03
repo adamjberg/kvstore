@@ -8,6 +8,7 @@ class NodeCircle:
     NUM_REPLICA_NODES = 2
 
     def __init__(self):
+        self.my_node = None
         self.all_nodes = []
         self.nodes = []
         self.init_nodes_from_file()

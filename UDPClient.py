@@ -101,7 +101,8 @@ class MessageDispatcherThread(Thread):
                 del self.client.pending_requests[uidBytes]
                 continue
 
-            self.client.on_message_received(message)
+            if self.client.on_message_received:
+                self.client.on_message_received(message)
 
 
 class UDPClient:
@@ -111,7 +112,7 @@ class UDPClient:
     DEFAULT_TIMEOUT_IN_MS = 100
     CACHE_EXPIRATION_TIME_SECONDS = 5
 
-    def __init__(self, port, on_message_received):
+    def __init__(self, port, on_message_received = None):
         self.port = port
         self.on_message_received = on_message_received
 
@@ -133,7 +134,10 @@ class UDPClient:
 
     def run(self):
         while True:
-            self.received_data.append(self.socket.recvfrom(UDPClient.MAX_LENGTH))
+            try:
+                self.received_data.append(self.socket.recvfrom(UDPClient.MAX_LENGTH))
+            except:
+                break
 
     def send_request(self, request, dest_addr, onResponse = None, onFail = None):
         uid = UID(self.port)
