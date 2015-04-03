@@ -56,8 +56,10 @@ class App:
         if successor:
             self.client.send_request(request, successor.get_addr(), None, self.join_request_failed)
         else:
+            print "First 1 Starting New Service"
             monitor_node_thread = MonitorNodeThread(self.client, self.node_circle, self.kvStore)
             monitor_node_thread.start()
+            self.request_handler.send_set_online_request()
 
     def join_request_failed(self, request):
         self.node_circle.set_node_online_with_addr(request.dest_addr, False)
@@ -67,4 +69,7 @@ class App:
         self.request_handler.handle_message(message)
 
 if __name__ == "__main__":
-    App()
+    try:
+        App()
+    except KeyboardInterrupt:
+        sys.exit()

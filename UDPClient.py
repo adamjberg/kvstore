@@ -81,7 +81,7 @@ class MessageDispatcherThread(Thread):
                 continue
 
             payload = data[UID.LENGTH:]
-            message = Message(uid, payload, addr)
+            message = Message(uid, payload, (socket.gethostbyname(addr[0]), addr[1]))
             uidBytes = uid.get_bytes()
 
             if uidBytes in self.client.handled_request_cache:

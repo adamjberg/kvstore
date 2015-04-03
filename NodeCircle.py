@@ -1,5 +1,6 @@
 from __future__ import with_statement
 import hashlib
+import socket
 import struct
 from Node import Node
 
@@ -28,9 +29,19 @@ class NodeCircle:
         for node in self.nodes:
             if node.get_addr() == addr:
                 return node
+            if socket.gethostbyname(node.get_addr()[0]) == addr[0] and node.get_addr()[1] == addr[1]:
+                return node
+        print "Could not find node with addr " + str(addr)
 
-    def set_node_online_with_addr(self, addr, online):
+    def set_node_online_with_addr(self, addr, online):    
         node = self.get_node_with_addr(addr)
+
+        if node == self.my_node:
+            print "Trying to set my node online to " + str(online)
+            return
+        if node is None:
+            return
+
         node.online = online
 
     def is_my_node_responsible_for_key(self, key):

@@ -25,6 +25,7 @@ class MonitorNodeThread(Thread):
 
     def ping_failed(self, request):
         down_node = self.node_circle.get_node_with_addr(request.dest_addr)
+        print "MARK NODE DOWN " + str(down_node)
 
         request = SetOfflineRequest(down_node.get_addr())
         for node in self.node_circle.get_online_nodes():

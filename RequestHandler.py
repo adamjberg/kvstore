@@ -105,6 +105,7 @@ class RequestHandler:
         handle_join_thread.start()
 
     def handle_join_success(self, message, request):
+        print "Successfully Joined!"
         self.client.send_response(message, SuccessResponse())
         self.send_set_online_request()
         monitor_node_thread = MonitorNodeThread(self.client, self.node_circle, self.kvStore)
@@ -113,7 +114,8 @@ class RequestHandler:
     def send_set_online_request(self):
         request = SetOnlineRequest()
         for node in self.node_circle.nodes:
-            self.client.send_request(request, node.get_addr(), self.set_online_success, self.set_online_failed)
+            if node != self.node_circle.my_node:
+                self.client.send_request(request, node.get_addr(), self.set_online_success, self.set_online_failed)
 
     def set_online_success(self, message):
         self.node_circle.set_node_online_with_addr(message.sender_addr, True)
@@ -122,12 +124,17 @@ class RequestHandler:
         self.node_circle.set_node_online_with_addr(request.dest_addr, False)
 
     def handle_set_online(self, message, request):
+        print "set online " + str(message.sender_addr)
         self.reset_pending_requests_for_addr(message.sender_addr)
         self.node_circle.set_node_online_with_addr(message.sender_addr, True)
         self.client.send_response(message, SuccessResponse())
 
     def handle_set_offline(self, message, request):
         down_node = self.node_circle.get_node_with_addr(request.addr)
+        print "Set offline " + str(down_node)
+        if down_node == self.node_circle.my_node:
+            self.send_set_online_request()
+            return
 
         replica_nodes = self.node_circle.get_replica_nodes()
 
@@ -152,6 +159,7 @@ class RequestHandler:
 
         uid = request.original_uid
         payload = original_request.get_bytes()
+
         self.handle_message(Message(uid, payload, request.return_addr))
         self.client.send_response(Message(message.uid, payload, message.sender_addr), SuccessResponse())
 
