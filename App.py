@@ -1,3 +1,5 @@
+import os
+import thread
 import socket
 import sys
 from KVStore import KVStore
@@ -18,7 +20,7 @@ class App:
         self.kvStore = KVStore()
         self.request_handler = RequestHandler(self.client, self.kvStore, self.node_circle)
         
-        self.send_join_request()
+        thread.start_new_thread(self.attempt_join, ())
 
         self.client.run()
 
@@ -61,6 +63,20 @@ class App:
             monitor_node_thread.start()
             self.request_handler.send_set_online_request()
 
+    def attempt_join(self):
+        self.discover_online_nodes()
+        self.send_join_request()
+
+    def discover_online_nodes(self):
+        request = PingRequest()
+        for node in self.node_circle.nodes:
+            self.client.send_request(request, node.get_addr(), None, self.ping_failed)
+        while(len(self.client.pending_requests) > 0):
+            pass
+
+    def ping_failed(self, request):
+        self.node_circle.set_node_online_with_addr(request.dest_addr, False)
+
     def join_request_failed(self, request):
         self.node_circle.set_node_online_with_addr(request.dest_addr, False)
         self.send_join_request()
@@ -72,4 +88,4 @@ if __name__ == "__main__":
     try:
         App()
     except KeyboardInterrupt:
-        sys.exit()
+        os._exit(os.EX_OK)
