@@ -32,9 +32,9 @@ class App:
 
         for node in nodes_for_my_ip:
             try:
-                self.client = UDPClient(node.port, self.handle_message)
+                self.client = UDPClient(node.get_addr(), self.handle_message)
                 self.node_circle.my_node = node
-                print "Connected on port: " + str(node.port)
+                print "Connected on port: " + str(node.get_addr())
                 return True
             except socket.error:
                 pass

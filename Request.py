@@ -175,7 +175,7 @@ class SetOfflineRequest(Request):
     COMMAND = chr(47)
     def __init__(self, addr):
         Request.__init__(self, SetOfflineRequest.COMMAND)
-        self.addr = (socket.gethostbyname(addr[0]), addr[1])
+        self.addr = addr
 
     def get_bytes(self):
         return Request.get_bytes(self) + struct.pack("<IH", struct.unpack("!I", socket.inet_aton(self.addr[0]))[0], self.addr[1])

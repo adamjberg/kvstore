@@ -1,5 +1,6 @@
 from GenericCache.GenericCache import GenericCache
 import socket
+import sys
 import time
 from threading import Thread
 from UID import UID
@@ -71,7 +72,7 @@ class MessageDispatcherThread(Thread):
     def run(self):
         while True:
             if len(self.client.received_data) == 0:
-                time.sleep(0.01)
+                time.sleep(0.0001)
                 continue
 
             data, addr = self.client.received_data.pop(0)
@@ -81,7 +82,7 @@ class MessageDispatcherThread(Thread):
                 continue
 
             payload = data[UID.LENGTH:]
-            message = Message(uid, payload, (socket.gethostbyname(addr[0]), addr[1]))
+            message = Message(uid, payload, addr)
             uidBytes = uid.get_bytes()
 
             if uidBytes in self.client.handled_request_cache:
@@ -112,12 +113,12 @@ class UDPClient:
     DEFAULT_TIMEOUT_IN_MS = 100
     CACHE_EXPIRATION_TIME_SECONDS = 5
 
-    def __init__(self, port, on_message_received = None):
-        self.port = port
+    def __init__(self, addr, on_message_received = None):
+        self.addr = addr
         self.on_message_received = on_message_received
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.socket.bind(("", self.port))
+        self.socket.bind(addr)
         self.socket.setblocking(True)
 
         self.pending_requests = dict()
@@ -140,11 +141,13 @@ class UDPClient:
                 break
 
     def send_request(self, request, dest_addr, onResponse = None, onFail = None):
-        uid = UID(self.port)
+        uid = UID(self.addr)
 
         payload = request.get_bytes()
-        self.pending_requests[uid.get_bytes()] = UDPClientRequest(dest_addr, uid, payload, onResponse, onFail)
+        client_request = UDPClientRequest(dest_addr, uid, payload, onResponse, onFail)
+        self.pending_requests[uid.get_bytes()] = client_request
         self.sendTo(uid, payload, dest_addr)
+        return client_request
 
     def send_response(self, message, response):
         self.reply(message, response.get_bytes())

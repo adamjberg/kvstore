@@ -1,7 +1,7 @@
 from __future__ import with_statement
 import hashlib
 import socket
-import sys
+import os
 import time
 from KVStore import KVStore
 from Message import Message
@@ -25,6 +25,7 @@ class RequestHandler:
             PutRequest.COMMAND: self.handle_put,
             GetRequest.COMMAND: self.handle_get,
             RemoveRequest.COMMAND: self.handle_remove,
+            ShutdownRequest.COMMAND: self.handle_shutdown,
             InternalPutRequest.COMMAND: self.handle_put,
             InternalGetRequest.COMMAND: self.handle_get,
             InternalRemoveRequest.COMMAND: self.handle_remove,
@@ -94,7 +95,7 @@ class RequestHandler:
 
     def handle_shutdown(self, message, request):
         self.client.send_response(message, SuccessResponse())
-        sys.exit()
+        os._exit(os.EX_OK)
 
     def handle_join(self, message, request):
         self.client.send_response(message, SuccessResponse())
@@ -131,9 +132,8 @@ class RequestHandler:
 
     def handle_set_offline(self, message, request):
         down_node = self.node_circle.get_node_with_addr(request.addr)
-        print "Set offline " + str(down_node)
+        print "Set offline " + str(down_node) + " from " + str(message.sender_addr)
         if down_node == self.node_circle.my_node:
-            self.send_set_online_request()
             return
 
         replica_nodes = self.node_circle.get_replica_nodes()
@@ -160,7 +160,7 @@ class RequestHandler:
         uid = request.original_uid
         payload = original_request.get_bytes()
 
-        self.handle_message(Message(uid, payload, request.return_addr))
+        self.client.received_data.insert(0, ((str(uid.get_bytes()) + str(payload)), request.return_addr))
         self.client.send_response(Message(message.uid, payload, message.sender_addr), SuccessResponse())
 
     def handle_unrecognized(self, message, resquest):

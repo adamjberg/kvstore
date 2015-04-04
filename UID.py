@@ -6,9 +6,14 @@ import time
 
 class UID:
     LENGTH = 16
-    def __init__(self, port = None):
-        self.ip = struct.unpack("<I", socket.inet_aton(socket.gethostbyname(socket.gethostname())))[0]
-        self.port = port
+    def __init__(self, addr = None):
+        if addr is None:
+            self.ip = None
+            self.port = None
+        else:
+            self.ip = struct.unpack("<I", socket.inet_aton(addr[0]))[0]
+            self.port = addr[1]
+            
         self.random = random.getrandbits(16)
         self.timestamp = int(round(time.time() * 1000))
 

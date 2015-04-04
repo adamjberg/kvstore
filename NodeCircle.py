@@ -18,6 +18,7 @@ class NodeCircle:
             lines = [x.strip('\n') for x in f.readlines()]
         for line in lines:
             host, port, location = line.split(":")
+            host = socket.gethostbyname(host)
             node = Node(host, port, location)
             self.all_nodes.append(node)
             self.nodes.append(node)
@@ -29,8 +30,6 @@ class NodeCircle:
     def get_node_with_addr(self, addr):
         for node in self.nodes:
             if node.get_addr() == addr:
-                return node
-            if socket.gethostbyname(node.get_addr()[0]) == addr[0] and node.get_addr()[1] == addr[1]:
                 return node
         print "Could not find node with addr " + str(addr)
 
