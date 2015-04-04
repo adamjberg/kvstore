@@ -45,6 +45,9 @@ class RequestHandler:
                 self.forward_request(message, request, dest_node)
                 return
 
+        # Bring node back online, if it's contacting me it's alive
+        self.node_circle.set_node_online_with_addr(message.sender_addr, True)
+
         self.handlers[request.command](message, request)
 
     def reset_pending_requests_for_addr(self, addr):
@@ -54,7 +57,10 @@ class RequestHandler:
 
     def forward_request(self, message, original_request, dest_node):
         request = ForwardedRequest(message.uid, message.sender_addr, original_request)
-        self.client.send_request(request, dest_node.get_addr())
+        self.client.send_request(request, dest_node.get_addr(), None, self.forward_failed)
+
+    def forward_failed(self, request):
+        self.node_circle.set_node_online_with_addr(request.dest_addr, False)
 
     def handle_put(self, message, request):
         if self.kvStore.put(request.key, request.value):

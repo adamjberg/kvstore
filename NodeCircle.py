@@ -31,7 +31,6 @@ class NodeCircle:
         for node in self.nodes:
             if node.get_addr() == addr:
                 return node
-        print "Could not find node with addr " + str(addr)
 
     def set_node_online_with_addr(self, addr, online):    
         node = self.get_node_with_addr(addr)
