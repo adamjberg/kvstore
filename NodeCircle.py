@@ -2,6 +2,7 @@ from __future__ import with_statement
 import hashlib
 import socket
 import struct
+import sys
 from Node import Node
 
 class NodeCircle:
@@ -14,7 +15,11 @@ class NodeCircle:
         self.init_nodes_from_file()
 
     def init_nodes_from_file(self):
-        with open("hosts.txt") as f:
+        if len(sys.argv) > 1:
+            filename = sys.argv[1]
+        else:
+            filename = "hosts.txt"
+        with open(filename) as f:
             lines = [x.strip('\n') for x in f.readlines()]
         for line in lines:
             host, port, location = line.split(":")
