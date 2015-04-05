@@ -139,7 +139,12 @@ class RequestHandler:
     def handle_set_offline(self, message, request):
         down_node = self.node_circle.get_node_with_addr(request.addr)
         print "Set offline " + str(down_node) + " from " + str(message.sender_addr)
+
         if down_node == self.node_circle.my_node:
+            return
+
+        if down_node is None:
+            print "Set offline no node found " + str(request.addr)
             return
 
         replica_nodes = self.node_circle.get_replica_nodes()
