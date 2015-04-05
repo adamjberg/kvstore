@@ -7,7 +7,6 @@ from Request import *
 from UDPClient import UDPClient
 from RequestHandler import *
 from NodeCircle import *
-from MonitorServerThread import *
 
 class App:
 
@@ -20,8 +19,6 @@ class App:
 
         self.kvStore = KVStore()
         self.request_handler = RequestHandler(self.client, self.kvStore, self.node_circle)
-        # self.monitor_server_thread = MonitorServerThread(self.node_circle, self.kvStore)
-        # self.monitor_server_thread.start()
         
         thread.start_new_thread(self.attempt_join, ())
 
