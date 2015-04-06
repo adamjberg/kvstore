@@ -31,6 +31,10 @@ class TestKVStore(unittest.TestCase):
         self.last_uid_time = time.time()
         self.used_uids = []
         self.num_requests = 0;
+        self.failed_requests = 0
+        self.successful_requests = 0
+        self.incorrect_responses = 0
+        self.missing_responses = 0
 
         if node_circle is None:
             node_circle = NodeCircle()
@@ -44,6 +48,18 @@ class TestKVStore(unittest.TestCase):
 
     def tearDown(self):
         self.socket.close()
+
+        if self.missing_responses > 0:
+            print "missing_responses " + str(self.missing_responses)
+        if self.failed_requests > 0:
+            print "failed_requests " + str(self.failed_requests)
+        if self.incorrect_responses > 0:
+            print "incorrect_responses " + str(self.incorrect_responses)
+
+        self.assertEqual(self.missing_responses, 0)
+        self.assertEqual(self.failed_requests, 0)
+        self.assertEqual(self.incorrect_responses, 0)
+
         pass
 
     def test_get_nonexistent_key(self):
@@ -149,24 +165,42 @@ class TestKVStore(unittest.TestCase):
         self.response = message
 
     def assert_no_response(self, response):
+        if response is not None:
+            self.incorrect_responses += 1
         self.assertTrue(response == None)
 
     def assert_response(self, response):
-        self.assertTrue(response != None)
+        if response is None:
+            self.missing_responses += 1
 
     def assert_nonexistent_key(self, response):
         self.assert_response_with_code(response, Response.NON_EXISTENT)
 
     def assert_get_value(self, response, expected_value):
         self.assert_successful_request(response)
-        self.assertEqual(response[3:], expected_value)
+
+        if response is None:
+            return
+
+        if response[3:] != expected_value:
+            self.incorrect_responses += 1
 
     def assert_successful_request(self, response):
-        self.assert_response_with_code(response, Response.SUCCESS)
+        self.assert_response(response)
+        if response is None:
+            return
+        if response[0] != Response.SUCCESS:
+            self.failed_requests += 1
+        else:
+            self.successful_requests += 1
 
     def assert_response_with_code(self, response, expected_response_code):
         self.assert_response(response)
-        self.assertEqual(response[0], expected_response_code)
+        if response is None:
+            return
+
+        if response[0] != expected_response_code:
+            self.incorrect_responses += 1
 
 if __name__ == '__main__':
     unittest.main()

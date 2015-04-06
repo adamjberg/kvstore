@@ -1,4 +1,5 @@
 from GenericCache.GenericCache import GenericCache
+import os
 import socket
 import sys
 import time
@@ -30,29 +31,32 @@ class RequestTimeoutThread(Thread):
 
     def run(self):
         while True:
-            cur_time = time.time()
-            failed_dest_addresses = {}
-            for uid, request in self.client.pending_requests.items():
-                time_since_last_attempt = (cur_time - request.last_attempt_time) * 1000
+            try:
+                cur_time = time.time()
+                failed_dest_addresses = {}
+                for uid, request in self.client.pending_requests.items():
+                    time_since_last_attempt = (cur_time - request.last_attempt_time) * 1000
 
-                if time_since_last_attempt > request.timeout:
-                    if request.attempts >= UDPClient.MAX_RETRY_ATTEMPTS:
-                        failed_dest_addresses[request.dest_addr] = True
-                        continue
+                    if time_since_last_attempt > request.timeout:
+                        if request.attempts >= UDPClient.MAX_RETRY_ATTEMPTS:
+                            failed_dest_addresses[request.dest_addr] = True
+                            continue
 
-                    request.attempts += 1
-                    request.timeout *= 2
+                        request.attempts += 1
+                        request.timeout *= 2
 
-                    self.client.sendTo(request.uid, request.payload, request.dest_addr)
-                    request.last_attempt_time = cur_time
+                        self.client.sendTo(request.uid, request.payload, request.dest_addr)
+                        request.last_attempt_time = cur_time
 
-            failed_requests = []
-            for addr in failed_dest_addresses:
-                for key, request in self.client.pending_requests.items():
-                    if request.dest_addr == addr:
-                        self.fail_request(request)
+                failed_requests = []
+                for addr in failed_dest_addresses:
+                    for key, request in self.client.pending_requests.items():
+                        if request.dest_addr == addr:
+                            self.fail_request(request)
 
-            time.sleep(UDPClient.DEFAULT_TIMEOUT_IN_MS * 0.001)
+                time.sleep(UDPClient.DEFAULT_TIMEOUT_IN_MS * 0.001)
+            except:
+                pass
 
     def fail_request(self, request):
         uid_bytes = request.uid.get_bytes()
@@ -71,39 +75,42 @@ class MessageDispatcherThread(Thread):
 
     def run(self):
         while True:
-            if len(self.client.received_data) == 0:
-                time.sleep(0.0001)
-                continue
+            try:
+                if len(self.client.received_data) == 0:
+                    time.sleep(0.0001)
+                    continue
 
-            data, addr = self.client.received_data.pop(0)
-            uid = UID.from_bytes(data)
+                data, addr = self.client.received_data.pop(0)
+                uid = UID.from_bytes(data)
 
-            if(int(round(time.time() * 1000)) - uid.timestamp > UDPClient.CACHE_EXPIRATION_TIME_SECONDS * 1000):
-                continue
+                if(int(round(time.time() * 1000)) - uid.timestamp > UDPClient.CACHE_EXPIRATION_TIME_SECONDS * 1000):
+                    continue
 
-            payload = data[UID.LENGTH:]
-            message = Message(uid, payload, addr)
-            uidBytes = uid.get_bytes()
+                payload = data[UID.LENGTH:]
+                message = Message(uid, payload, addr)
+                uidBytes = uid.get_bytes()
 
-            if uidBytes in self.client.handled_request_cache:
-                continue
+                if uidBytes in self.client.handled_request_cache:
+                    continue
 
-            cached_response = self.client.response_cache.fetch(uidBytes)
-            if cached_response:
-                self.client.reply(message, cached_response)
-                continue
+                cached_response = self.client.response_cache.fetch(uidBytes)
+                if cached_response:
+                    self.client.reply(message, cached_response)
+                    continue
 
-            if uidBytes in self.client.pending_requests:
-                successful_request = self.client.pending_requests[uidBytes]
-                onResponse = successful_request.onResponse
-                if onResponse is not None and hasattr(onResponse, '__call__'):
-                    onResponse(message)
-                self.client.handled_request_cache.insert(uidBytes, successful_request)
-                del self.client.pending_requests[uidBytes]
-                continue
+                if uidBytes in self.client.pending_requests:
+                    successful_request = self.client.pending_requests[uidBytes]
+                    onResponse = successful_request.onResponse
+                    if onResponse is not None and hasattr(onResponse, '__call__'):
+                        onResponse(message)
+                    self.client.handled_request_cache.insert(uidBytes, successful_request)
+                    del self.client.pending_requests[uidBytes]
+                    continue
 
-            if self.client.on_message_received:
-                self.client.on_message_received(message)
+                if self.client.on_message_received:
+                    self.client.on_message_received(message)
+            except:
+                pass
 
 
 class UDPClient:
@@ -137,8 +144,11 @@ class UDPClient:
         while True:
             try:
                 self.received_data.append(self.socket.recvfrom(UDPClient.MAX_LENGTH))
-            except:
+            except KeyboardInterrupt:
+                os._exit(os.EX_OK)
                 break
+            except:
+                pass
 
     def send_request(self, request, dest_addr, onResponse = None, onFail = None):
         uid = UID(self.addr)

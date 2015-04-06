@@ -131,20 +131,17 @@ class RequestHandler:
         self.node_circle.set_node_online_with_addr(request.dest_addr, False)
 
     def handle_set_online(self, message, request):
-        print "set online " + str(message.sender_addr)
         self.reset_pending_requests_for_addr(message.sender_addr)
         self.node_circle.set_node_online_with_addr(message.sender_addr, True)
         self.client.send_response(message, SuccessResponse())
 
     def handle_set_offline(self, message, request):
         down_node = self.node_circle.get_node_with_addr(request.addr)
-        print "Set offline " + str(down_node) + " from " + str(message.sender_addr)
 
         if down_node == self.node_circle.my_node:
             return
 
         if down_node is None:
-            print "Set offline no node found " + str(request.addr)
             return
 
         replica_nodes = self.node_circle.get_replica_nodes()
