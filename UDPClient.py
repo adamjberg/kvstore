@@ -83,9 +83,6 @@ class MessageDispatcherThread(Thread):
                 data, addr = self.client.received_data.pop(0)
                 uid = UID.from_bytes(data)
 
-                if(int(round(time.time() * 1000)) - uid.timestamp > UDPClient.CACHE_EXPIRATION_TIME_SECONDS * 1000):
-                    continue
-
                 payload = data[UID.LENGTH:]
                 message = Message(uid, payload, addr)
                 uidBytes = uid.get_bytes()
