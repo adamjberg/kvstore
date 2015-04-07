@@ -130,6 +130,7 @@ class TestKVStore(unittest.TestCase):
             val = base_val + str(i)
             self.assert_get_value(self.get(key, random.choice(self.online_nodes)), val)
             self.assert_successful_request(self.remove(key, random.choice(self.online_nodes)))
+            self.assert_nonexistent_key(self.get(key, random.choice(self.online_nodes)))
 
 
     # def test_shutdown(self):
