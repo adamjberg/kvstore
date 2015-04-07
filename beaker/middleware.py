@@ -89,9 +89,9 @@ class SessionMiddleware(object):
             dict  All settings should be prefixed by 'session.'. This
             method of passing variables is intended for Paste and other
             setups that accumulate multiple component settings in a
-            single dictionary. If config contains *no session. prefixed
+            single dictionary. If config contains *no cache. prefixed
             args*, then *all* of the config options will be used to
-            intialize the Session objects.
+            intialize the Cache objects.
 
         ``environ_key``
             Location where the Session instance will keyed in the WSGI
@@ -111,7 +111,7 @@ class SessionMiddleware(object):
 
         # Pull out any config args meant for beaker session. if there are any
         for dct in [config, kwargs]:
-            for key, val in dct.items():
+            for key, val in dct.iteritems():
                 if key.startswith('beaker.session.'):
                     self.options[key[15:]] = val
                 if key.startswith('session.'):
@@ -124,8 +124,8 @@ class SessionMiddleware(object):
         # Coerce and validate session params
         coerce_session_params(self.options)
 
-        # Assume all keys are intended for session if none are prefixed with
-        # 'session.'
+        # Assume all keys are intended for cache if none are prefixed with
+        # 'cache.'
         if not self.options and config:
             self.options = config
 

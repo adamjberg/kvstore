@@ -1,5 +1,4 @@
-from .._compat import PY2
-
+from __future__ import with_statement
 from beaker.container import NamespaceManager, Container
 from beaker.crypto.util import sha1
 from beaker.exceptions import InvalidCacheBackendError, MissingCacheParameter
@@ -34,13 +33,8 @@ def _load_client(name='auto'):
         import memcache
         return memcache
 
-    def _bmemcached():
-        global bmemcached
-        import bmemcached
-        return bmemcached
-
     def _auto():
-        for _client in (_pylibmc, _cmemcache, _memcache, _bmemcached):
+        for _client in (_pylibmc, _cmemcache, _memcache):
             try:
                 return _client()
             except ImportError:
@@ -54,7 +48,6 @@ def _load_client(name='auto'):
         'pylibmc': _pylibmc,
         'cmemcache': _cmemcache,
         'memcache': _memcache,
-        'bmemcached': _bmemcached,
         'auto': _auto
     }
     _client_libs[name] = clib = clients[name]()
@@ -92,8 +85,6 @@ class MemcachedNamespaceManager(NamespaceManager):
         if not url:
             raise MissingCacheParameter("url is required")
 
-        self.lock_dir = None
-
         if lock_dir:
             self.lock_dir = lock_dir
         elif data_dir:
@@ -120,8 +111,6 @@ class MemcachedNamespaceManager(NamespaceManager):
             key = key.decode('ascii')
         formated_key = (self.namespace + '_' + key).replace(' ', '\302\267')
         if len(formated_key) > MAX_KEY_LENGTH:
-            if not PY2:
-                formated_key = formated_key.encode('utf-8')
             formated_key = sha1(formated_key).hexdigest()
         return formated_key
 

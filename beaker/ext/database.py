@@ -1,5 +1,4 @@
-from beaker._compat import pickle
-
+import cPickle
 import logging
 import pickle
 from datetime import datetime
@@ -56,8 +55,6 @@ class DatabaseNamespaceManager(OpenResourceNamespaceManager):
 
         if sa_opts is None:
             sa_opts = params
-
-        self.lock_dir = None
 
         if lock_dir:
             self.lock_dir = lock_dir
@@ -127,7 +124,7 @@ class DatabaseNamespaceManager(OpenResourceNamespaceManager):
             self._is_new = False
             try:
                 self.hash = result['data']
-            except (IOError, OSError, EOFError, pickle.PickleError,
+            except (IOError, OSError, EOFError, cPickle.PickleError,
                     pickle.PickleError):
                 log.debug("Couln't load pickle data, creating new storage")
                 self.hash = {}
