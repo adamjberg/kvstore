@@ -3,7 +3,13 @@ import socket
 class Node:
     def __init__(self, hostname, port, location):
         self.hostname = hostname
-        self.ip = socket.gethostbyname(hostname)
+        
+        try:
+            self.ip = socket.gethostbyname(hostname)
+        except:
+            print "Failed to get ip for " + hostname
+            self.ip = hostname
+
         self.port = int(port)
         self.location = int(location)
         self.online = True
