@@ -116,6 +116,22 @@ class TestKVStore(unittest.TestCase):
             self.assert_get_value(self.get(key, node), val)
         self.remove(key)
 
+    def test_many_put(self):
+        base_key = "test_many_put"
+        base_val = "test_many_put"
+
+        for i in range(1000):
+            key = base_key + str(i)
+            val = base_val + str(i)
+            self.assert_successful_request(self.put(key, val, random.choice(self.online_nodes)))
+
+        for i in range(1000):
+            key = base_key + str(i)
+            val = base_val + str(i)
+            self.assert_get_value(self.get(key, random.choice(self.online_nodes)), val)
+            self.assert_successful_request(self.remove(key, random.choice(self.online_nodes)))
+
+
     # def test_shutdown(self):
     #     self.assert_successful_request(self.shutdown())
     #     self.assert_no_response(self.get(""))
