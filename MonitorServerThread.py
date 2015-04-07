@@ -6,7 +6,7 @@ import urllib2
 
 class MonitorServerThread(Thread):
     SERVER_ADDR = ("54.68.197.12", 41170)
-    MONITOR_DELAY_SECONDS = 10
+    MONITOR_DELAY_SECONDS = 15
 
     def __init__(self, node_circle, kvStore):
         Thread.__init__(self)
@@ -14,14 +14,17 @@ class MonitorServerThread(Thread):
         self.node_circle = node_circle
         self.kvStore = kvStore
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.socket.bind(("", 41171))
+        self.socket.bind(("", 0))
         self.hostname = socket.gethostname()
         self.loc = urllib2.urlopen("http://ip-api.com/json/").read()
 
     def run(self):
         while True:
-            self.socket.sendto(self.get_data(), MonitorServerThread.SERVER_ADDR)
-            time.sleep(MonitorServerThread.MONITOR_DELAY_SECONDS)
+            try:
+                self.socket.sendto(self.get_data(), MonitorServerThread.SERVER_ADDR)
+                time.sleep(MonitorServerThread.MONITOR_DELAY_SECONDS)
+            except:
+                pass
 
     def get_data(self):
         data = {}
