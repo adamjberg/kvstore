@@ -20,7 +20,6 @@ class MonitorServerThread(Thread):
 
     def run(self):
         while True:
-            print "RUN " + str(self.get_data())
             self.socket.sendto(self.get_data(), MonitorServerThread.SERVER_ADDR)
             time.sleep(MonitorServerThread.MONITOR_DELAY_SECONDS)
 
