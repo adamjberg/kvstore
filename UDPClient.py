@@ -1,4 +1,4 @@
-from GenericCache.GenericCache import GenericCache
+from beaker.cache import Cache
 import os
 import socket
 import sys
@@ -64,7 +64,7 @@ class RequestTimeoutThread(Thread):
         if request.onFail is not None and hasattr(request.onFail, '__call__'):
             request.onFail(request)
 
-        self.client.handled_request_cache.insert(uid_bytes, request)
+        self.client.handled_request_cache.put(uid_bytes, request)
         del self.client.pending_requests[uid_bytes]  
 
 class MessageDispatcherThread(Thread):
@@ -93,7 +93,11 @@ class MessageDispatcherThread(Thread):
                 if uidBytes in self.client.handled_request_cache:
                     continue
 
-                cached_response = self.client.response_cache.fetch(uidBytes)
+                if uidBytes in self.client.response_cache:
+                    cached_response = self.client.response_cache.get(uidBytes)
+                else:
+                    cached_response = None
+
                 if cached_response:
                     self.client.reply(message, cached_response)
                     continue
@@ -103,7 +107,7 @@ class MessageDispatcherThread(Thread):
                     onResponse = successful_request.onResponse
                     if onResponse is not None and hasattr(onResponse, '__call__'):
                         onResponse(message)
-                    self.client.handled_request_cache.insert(uidBytes, successful_request)
+                    self.client.handled_request_cache.put(uidBytes, successful_request)
                     del self.client.pending_requests[uidBytes]
                     continue
 
@@ -116,7 +120,6 @@ class MessageDispatcherThread(Thread):
 class UDPClient:
     MAX_LENGTH = 16000
     MAX_RETRY_ATTEMPTS = 3
-    MAX_CACHE_LENGTH = 1000
     DEFAULT_TIMEOUT_IN_MS = 100
     CACHE_EXPIRATION_TIME_SECONDS = 5
 
@@ -129,8 +132,8 @@ class UDPClient:
         self.socket.setblocking(True)
 
         self.pending_requests = dict()
-        self.handled_request_cache = GenericCache(UDPClient.MAX_CACHE_LENGTH, UDPClient.CACHE_EXPIRATION_TIME_SECONDS)
-        self.response_cache = GenericCache(UDPClient.MAX_CACHE_LENGTH, UDPClient.CACHE_EXPIRATION_TIME_SECONDS)
+        self.handled_request_cache = Cache("handled_request", expire=UDPClient.CACHE_EXPIRATION_TIME_SECONDS)
+        self.response_cache = Cache("response_cache", expire=UDPClient.CACHE_EXPIRATION_TIME_SECONDS)
 
         self.request_timeout_thread = RequestTimeoutThread(self)
         self.request_timeout_thread.start()
@@ -163,7 +166,7 @@ class UDPClient:
         self.reply(message, response.get_bytes())
 
     def reply(self, message, payload):
-        self.response_cache.insert(message.uid.get_bytes(), payload)
+        self.response_cache.put(message.uid.get_bytes(), payload)
         self.sendTo(message.uid, payload, message.sender_addr)
 
     def sendTo(self, uid, payload, addr):
