@@ -1,6 +1,9 @@
+import socket
+
 class Node:
-    def __init__(self, ip, port, location):
-        self.ip = ip
+    def __init__(self, hostname, port, location):
+        self.hostname = hostname
+        self.ip = socket.gethostbyname(hostname)
         self.port = int(port)
         self.location = int(location)
         self.online = True

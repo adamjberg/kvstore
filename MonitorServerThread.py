@@ -42,7 +42,7 @@ class MonitorServerThread(Thread):
         data = []
         for node in self.node_circle.all_nodes:
             node_data = {}
-            node_data["hostname"] = node.ip
+            node_data["hostname"] = node.hostname
             node_data["port"] = node.port
             node_data["location"] = node.location
             node_data["status"] = node.online
@@ -51,7 +51,6 @@ class MonitorServerThread(Thread):
             node_data["kvstore"] = {}
 
             if node == self.node_circle.my_node:
-                node_data["hostname"] = self.hostname
                 node_data["kvstore"] = self.kvStore.kv_dict
                 node_data["spaceAvailable"] = self.kvStore.space_available
 

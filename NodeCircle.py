@@ -23,7 +23,6 @@ class NodeCircle:
             lines = [x.strip('\n') for x in f.readlines()]
         for line in lines:
             host, port, location = line.split(":")
-            host = socket.gethostbyname(host)
             node = Node(host, port, location)
             self.all_nodes.append(node)
             self.nodes.append(node)
