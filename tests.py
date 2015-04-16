@@ -55,6 +55,10 @@ class TestKVStore(unittest.TestCase):
 
         pass
 
+    def test_unrecognized_command(self):
+        req = Request(chr(100))
+        self.send_request(req)
+
     def test_get_nonexistent_key(self):
         resp = self.get("test_get_nonexistent_key")
         self.assert_nonexistent_key(resp)
@@ -126,9 +130,9 @@ class TestKVStore(unittest.TestCase):
     #         self.assert_nonexistent_key(self.get(key, random.choice(self.online_nodes)))
 
 
-    def test_shutdown(self):
-        self.assert_successful_request(self.shutdown())
-        self.assert_no_response(self.get(""))
+    # def test_shutdown(self):
+    #     self.assert_successful_request(self.shutdown())
+    #     self.assert_no_response(self.get(""))
 
     def get_uid(self):
         uid = None

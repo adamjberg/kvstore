@@ -91,8 +91,7 @@ class App:
         if request:
             self.handle_request(uid, request, sender_address)
         else:
-            # Send invalid command response
-            pass
+            self.sender.send_response(uid, UnrecognizedCommandResponse(), sender_address)
 
     def handle_request(self, uid, request, sender_address):
         if not hasattr(request, "key") or self.node_circle.is_my_key(request.key):
