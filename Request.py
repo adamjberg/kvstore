@@ -71,7 +71,7 @@ class Request:
             port = struct.unpack("<H", b[UID.LENGTH + 1 + 4:UID.LENGTH + 1 + 6])[0]
             return ForwardedRequest(original_uid, (ip, port), Request.from_bytes(b[UID.LENGTH + 1 + 6:]))
         else:
-            return UnrecognizedRequest()
+            return None
 
     @staticmethod
     def get_key_from_bytes(b):
@@ -99,11 +99,6 @@ class Request:
                 return ""
         else:
             return ""
-
-class UnrecognizedRequest(Request):
-    COMMAND = chr(99)
-    def __init__(self):
-        Request.__init__(self, PutRequest.COMMAND)
 
 class PutRequest(Request):
     COMMAND = chr(1)

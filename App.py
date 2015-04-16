@@ -7,12 +7,19 @@ from Request import *
 from RequestHandler import *
 from NodeCircle import *
 from ReceiverThread import *
+from Sender import *
 
 class App:
 
     def __init__(self):
         self.init_node_circle()
         self.init_receiver_thread()
+
+        self.sender = Sender(self.socket)
+        self.kv_store = KVStore()
+
+        self.request_handler = RequestHandler(self.sender, self.kv_store, self.node_circle)
+
         self.main_loop()
 
     def init_node_circle(self):
@@ -67,10 +74,33 @@ class App:
     def main_loop(self):
         while True:
             data, sender_address = self.wait_until_next_event_or_data()
-            request = Request.from_bytes(data)
-            if request:
-                print "DATA"
-                self.received_data_queue.task_done()
+
+            if self.is_data_valid(data):
+                self.handle_valid_data(data, sender_address)
+
+    def is_data_valid(self, data):
+        return data and len(data) > UID.LENGTH
+
+    def handle_valid_data(self, data, sender_address):
+        self.received_data_queue.task_done()
+
+        uid = UID.from_bytes(data)
+        payload = data[UID.LENGTH:]
+
+        request = Request.from_bytes(payload)
+        if request:
+            self.handle_request(uid, request, sender_address)
+        else:
+            # Send invalid command response
+            pass
+
+    def handle_request(self, uid, request, sender_address):
+        if not hasattr(request, "key") or self.node_circle.is_my_key(request.key):
+            response = self.request_handler.get_response(request)
+            if response:
+                self.sender.send_response(uid, response, sender_address)
+        else:
+            pass
 
     def wait_until_next_event_or_data(self):
         try:

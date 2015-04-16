@@ -17,8 +17,8 @@ class UID:
         self.random = random.getrandbits(16)
         self.timestamp = int(round(time.time() * 1000))
 
-    def get_hash(self):
-        return hashlib.sha256(self.get_bytes()).hexdigest()
+    def __str__(self):
+        return self.get_bytes()
 
     def get_bytes(self):
         return struct.pack("<IHHQ",

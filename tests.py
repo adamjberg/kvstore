@@ -59,22 +59,22 @@ class TestKVStore(unittest.TestCase):
         resp = self.get("test_get_nonexistent_key")
         self.assert_nonexistent_key(resp)
 
-    # def test_put_and_remove(self):
-    #     key = "test_put"
-    #     value = "test_put"
-    #     self.assert_successful_request(self.put(key, value))
-    #     self.assert_get_value(self.get(key), value)
-    #     self.assert_successful_request(self.remove(key))
+    def test_put_and_remove(self):
+        key = "test_put"
+        value = "test_put"
+        self.assert_successful_request(self.put(key, value))
+        self.assert_get_value(self.get(key), value)
+        self.assert_successful_request(self.remove(key))
 
-    # def test_cached_response(self):
-    #     key = "test_cached_response"
-    #     uid = self.get_uid()
+    def test_cached_response(self):
+        key = "test_cached_response"
+        uid = self.get_uid()
 
-    #     self.assert_nonexistent_key(self.get(key, None, uid))
-    #     # check for same response
-    #     self.assert_nonexistent_key(self.put(key, "", None, uid))
-    #     # Make sure the put didn't happen
-    #     self.assert_nonexistent_key(self.get(key))
+        self.assert_nonexistent_key(self.get(key, None, uid))
+        # check for same response
+        self.assert_nonexistent_key(self.put(key, "", None, uid))
+        # Make sure the put didn't happen
+        self.assert_nonexistent_key(self.get(key))
 
     # def test_replace(self):
     #     key = "test_replace"
