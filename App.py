@@ -115,9 +115,12 @@ class App:
 
     def wait_until_next_event_or_data(self):
         try:
-            return self.received_data_queue.get(timeout=1000)
+            return self.received_data_queue.get(timeout=self.get_time_til_next_event())
         except Queue.Empty:
             return (None, None)
+
+    def get_time_til_next_event(self):
+        return self.sender.get_time_til_next_timeout()
 
 if __name__ == "__main__":
     App()

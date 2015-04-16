@@ -1,4 +1,5 @@
 import socket
+import sys
 import time
 from UID import UID
 
@@ -65,6 +66,14 @@ class Sender:
             return True
         except:
             return False
+
+    def get_time_til_next_timeout(self):
+        time_til_next_timeout = sys.maxint
+        for request in self.pending_requests:
+            if request.timeout < time_til_next_timeout:
+                time_til_next_timeout = request.timeout
+                
+        return time_til_next_timeout
 
     def send_request(self, request, dest_addr, onResponse = None, onFail = None):
         uid = UID(self.addr)
