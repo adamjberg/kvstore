@@ -1,92 +1,82 @@
 import os
-import thread
 import socket
 import sys
+import Queue
 from KVStore import KVStore
 from Request import *
-from UDPClient import UDPClient
 from RequestHandler import *
 from NodeCircle import *
-from MonitorServerThread import *
+from ReceiverThread import *
 
 class App:
 
     def __init__(self):
-        self.node_circle = NodeCircle()
+        self.init_node_circle()
+        self.init_receiver_thread()
+        self.main_loop()
 
-        if self.init_client() is False:
-            print "Failed to bind to a port."
-            sys.exit()
+    def init_node_circle(self):
+        if len(sys.argv) > 1:
+            filename = sys.argv[1]
+        else:
+            filename = "hosts.txt"
 
-        self.kvStore = KVStore()
-        self.request_handler = RequestHandler(self.client, self.kvStore, self.node_circle)
-        
-        thread.start_new_thread(self.attempt_join, ())
+        nodes = []
+        with open(filename) as f:
+            lines = [x.strip('\n') for x in f.readlines()]
+        for line in lines:
+            host, port, location = line.split(":")
+            node = Node(host, port, location)
+            nodes.append(node)
 
-        self.monitor_server_thread = MonitorServerThread(self.node_circle, self.kvStore)
-        self.monitor_server_thread.start()
+        self.socket, my_node = self.get_my_socket_and_node(nodes)
 
-        self.client.run()
+        self.node_circle = NodeCircle(nodes, my_node)
 
-    def init_client(self):
+    def get_my_socket_and_node(self, nodes):
         nodes_for_my_ip = []
 
-        for node in self.node_circle.nodes:
+        for node in nodes:
             ip = node.ip
             if self.does_ip_match_mine(ip):
                 nodes_for_my_ip.append(node)
 
         for node in nodes_for_my_ip:
             try:
-                self.client = UDPClient(node.get_addr(), self.handle_message)
-                self.node_circle.set_my_node(node)
-                print "Connected on port: " + str(node.get_addr())
-                return True
+                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                sock.bind(node.get_addr())
+                sock.setblocking(True)
+
+                print "Connected to " + str(node)
+
+                return (sock, node)
             except socket.error:
                 pass
 
-        return False
+        print "Could not find open port, Exiting"
+        sys.exit()
 
     def does_ip_match_mine(self, ip):
-        if ip.startswith("127.") or ip.startswith("localhost"):
-            return True
-        elif ip == socket.gethostbyname(socket.gethostname()):
-            return True
-        elif ip == socket.gethostname():
-            return True
-        return False  
+        return ip.startswith("127.") or ip.startswith("localhost") or ip == socket.gethostbyname(socket.gethostname()) or ip == socket.gethostname()
 
-    def send_join_request(self):
-        request = JoinRequest()
-        successor = self.node_circle.get_successor()
-        if successor:
-            self.client.send_request(request, successor.get_addr(), None, self.join_request_failed)
-        else:
-            print "First 1 Starting New Service"
-            monitor_node_thread = MonitorNodeThread(self.client, self.node_circle, self.kvStore)
-            monitor_node_thread.start()
-            self.request_handler.send_set_online_request()
+    def init_receiver_thread(self):
+        self.received_data_queue = Queue.Queue()
+        self.receiver_thread = ReceiverThread(self.socket, self.received_data_queue)
+        self.receiver_thread.start()
 
-    def attempt_join(self):
-        self.discover_online_nodes()
-        self.send_join_request()
+    def main_loop(self):
+        while True:
+            data, sender_address = self.wait_until_next_event_or_data()
+            request = Request.from_bytes(data)
+            if request:
+                print "DATA"
+                self.received_data_queue.task_done()
 
-    def discover_online_nodes(self):
-        request = PingRequest()
-        for node in self.node_circle.nodes:
-            self.client.send_request(request, node.get_addr(), None, self.ping_failed)
-        while(len(self.client.pending_requests) > 0):
-            pass
-
-    def ping_failed(self, request):
-        self.node_circle.set_node_online_with_addr(request.dest_addr, False)
-
-    def join_request_failed(self, request):
-        self.node_circle.set_node_online_with_addr(request.dest_addr, False)
-        self.send_join_request()
-
-    def handle_message(self, message):
-        self.request_handler.handle_message(message)
+    def wait_until_next_event_or_data(self):
+        try:
+            return self.received_data_queue.get(timeout=1000)
+        except Queue.Empty:
+            return (None, None)
 
 if __name__ == "__main__":
     App()

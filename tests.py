@@ -5,7 +5,7 @@ import threading
 import time
 from Request import *
 from Response import *
-from NodeCircle import *
+from Node import *
 
 node_circle = None
 
@@ -36,15 +36,8 @@ class TestKVStore(unittest.TestCase):
         self.incorrect_responses = 0
         self.missing_responses = 0
 
-        if node_circle is None:
-            node_circle = NodeCircle()
-            self.discover_down_nodes()
-
-        self.assertNotEqual(len(node_circle.get_online_nodes()), 0)
-
         self.socket.settimeout(5)
-        self.online_nodes = node_circle.get_online_nodes()
-        self.test_node = random.choice(self.online_nodes)
+        self.test_node = Node("127.0.0.1", 12000, 0)
 
     def tearDown(self):
         self.socket.close()
@@ -66,71 +59,71 @@ class TestKVStore(unittest.TestCase):
         resp = self.get("test_get_nonexistent_key")
         self.assert_nonexistent_key(resp)
 
-    def test_put_and_remove(self):
-        key = "test_put"
-        value = "test_put"
-        self.assert_successful_request(self.put(key, value))
-        self.assert_get_value(self.get(key), value)
-        self.assert_successful_request(self.remove(key))
+    # def test_put_and_remove(self):
+    #     key = "test_put"
+    #     value = "test_put"
+    #     self.assert_successful_request(self.put(key, value))
+    #     self.assert_get_value(self.get(key), value)
+    #     self.assert_successful_request(self.remove(key))
 
-    def test_cached_response(self):
-        key = "test_cached_response"
-        uid = self.get_uid()
+    # def test_cached_response(self):
+    #     key = "test_cached_response"
+    #     uid = self.get_uid()
 
-        self.assert_nonexistent_key(self.get(key, None, uid))
-        # check for same response
-        self.assert_nonexistent_key(self.put(key, "", None, uid))
-        # Make sure the put didn't happen
-        self.assert_nonexistent_key(self.get(key))
+    #     self.assert_nonexistent_key(self.get(key, None, uid))
+    #     # check for same response
+    #     self.assert_nonexistent_key(self.put(key, "", None, uid))
+    #     # Make sure the put didn't happen
+    #     self.assert_nonexistent_key(self.get(key))
 
-    def test_replace(self):
-        key = "test_replace"
-        val1 = "test_replace1"
-        val2 = "test_replace2"
-        self.put(key, val1)
-        self.put(key, val2)
-        self.assert_get_value(self.get(key), val2)
+    # def test_replace(self):
+    #     key = "test_replace"
+    #     val1 = "test_replace1"
+    #     val2 = "test_replace2"
+    #     self.put(key, val1)
+    #     self.put(key, val2)
+    #     self.assert_get_value(self.get(key), val2)
 
-    def test_remove_nonexistent(self):
-        self.assert_nonexistent_key(self.remove("test_remove_nonexistent"))
+    # def test_remove_nonexistent(self):
+    #     self.assert_nonexistent_key(self.remove("test_remove_nonexistent"))
 
-    def test_concurrent_put(self):
-        uid1 = self.get_uid()
-        uid2 = self.get_uid()
-        val1 = "val1"
-        val2 = "val2"
-        uid2.timestamp += 1
+    # def test_concurrent_put(self):
+    #     uid1 = self.get_uid()
+    #     uid2 = self.get_uid()
+    #     val1 = "val1"
+    #     val2 = "val2"
+    #     uid2.timestamp += 1
 
-        key = "test_concurrent_put"
-        self.put(key, val1, None, uid1)
-        self.put(key, val2, None, uid2)
-        self.put(key, val1, None, uid1)
+    #     key = "test_concurrent_put"
+    #     self.put(key, val1, None, uid1)
+    #     self.put(key, val2, None, uid2)
+    #     self.put(key, val1, None, uid1)
 
-        self.assert_get_value(self.get(key), val2)
+    #     self.assert_get_value(self.get(key), val2)
 
-    def test_put_one_get_all(self):
-        key = "test_put_one_get_all"
-        val = "test_put_one_get_all"
-        self.put(key, val)
-        for node in self.online_nodes:
-            self.assert_get_value(self.get(key, node), val)
-        self.remove(key)
+    # def test_put_one_get_all(self):
+    #     key = "test_put_one_get_all"
+    #     val = "test_put_one_get_all"
+    #     self.put(key, val)
+    #     for node in self.online_nodes:
+    #         self.assert_get_value(self.get(key, node), val)
+    #     self.remove(key)
 
-    def test_many_put(self):
-        base_key = "test_many_put"
-        base_val = "test_many_put"
+    # def test_many_put(self):
+    #     base_key = "test_many_put"
+    #     base_val = "test_many_put"
 
-        for i in range(1000):
-            key = base_key + str(i)
-            val = base_val + str(i)
-            self.assert_successful_request(self.put(key, val, random.choice(self.online_nodes)))
+    #     for i in range(1000):
+    #         key = base_key + str(i)
+    #         val = base_val + str(i)
+    #         self.assert_successful_request(self.put(key, val, random.choice(self.online_nodes)))
 
-        for i in range(1000):
-            key = base_key + str(i)
-            val = base_val + str(i)
-            self.assert_get_value(self.get(key, random.choice(self.online_nodes)), val)
-            self.assert_successful_request(self.remove(key, random.choice(self.online_nodes)))
-            self.assert_nonexistent_key(self.get(key, random.choice(self.online_nodes)))
+    #     for i in range(1000):
+    #         key = base_key + str(i)
+    #         val = base_val + str(i)
+    #         self.assert_get_value(self.get(key, random.choice(self.online_nodes)), val)
+    #         self.assert_successful_request(self.remove(key, random.choice(self.online_nodes)))
+    #         self.assert_nonexistent_key(self.get(key, random.choice(self.online_nodes)))
 
 
     # def test_shutdown(self):

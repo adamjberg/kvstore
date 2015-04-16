@@ -24,8 +24,8 @@ class Request:
 
     @staticmethod
     def from_bytes(b):
-        if len(b) == 0:
-            raise Exception("Empty bytes trying to be parsed as Request")
+        if b is None or len(b) == 0:
+            return None
 
         command = struct.unpack("<c",b[0])[0]
 
