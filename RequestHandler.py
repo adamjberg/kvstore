@@ -55,10 +55,4 @@ class RequestHandler:
         return SuccessResponse()
 
     def handle_forward(self, request):
-        original_request = request.original_request
-
-        # uid = request.original_uid
-        # payload = original_request.get_bytes()
-
-        # self.sender.received_data.insert(0, ((str(uid.get_bytes()) + str(payload)), request.return_addr))
-        # self.sender.send_response(Message(message.uid, payload, message.sender_addr), SuccessResponse())
+        return SuccessResponse()

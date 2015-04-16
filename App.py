@@ -77,6 +77,7 @@ class App:
 
             if self.is_data_valid(data):
                 self.handle_valid_data(data, sender_address)
+                self.received_data_queue.task_done()
 
             self.sender.check_for_timeouts()
 
@@ -84,8 +85,6 @@ class App:
         return data and len(data) > UID.LENGTH
 
     def handle_valid_data(self, data, sender_address):
-        self.received_data_queue.task_done()
-
         uid = UID.from_bytes(data)
         payload = data[UID.LENGTH:]
 
@@ -110,12 +109,17 @@ class App:
 
             if request.command == ShutdownRequest.COMMAND:
                 sys.exit()
+            elif request.command == ForwardedRequest.COMMAND:
+                original_request = request.original_request
+
+                uid = request.original_uid
+                payload = original_request.get_bytes()
+                self.handle_valid_data(str(uid) + str(payload), request.return_addr)
         else:
-            forward_request(uid, request, sender_address)
+            self.forward_request(uid, request, sender_address)
 
     def forward_request(self, uid, original_request, sender_address):
-        print "FORWARD"
-        dest_node = self.node_circle.get_optimal_node_for_key(request.key)
+        dest_node = self.node_circle.get_optimal_node_for_key(original_request.key)
         request = ForwardedRequest(uid, sender_address, original_request)
         self.sender.send_request(request, dest_node.get_addr())
 

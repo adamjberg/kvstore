@@ -27,6 +27,7 @@ class Sender:
 
     def __init__(self, sock):
         self.socket = sock
+        self.address = sock.getsockname()
         self.pending_requests = {}
         self.response_cache = {}
 
@@ -47,7 +48,7 @@ class Sender:
                 self.send_to(request.uid, request.payload, request.dest_addr)
 
     def fail_request(self, request):
-        uid_bytes = sr(request.uid)
+        uid_bytes = str(request.uid)
 
         if request.onFail is not None and hasattr(request.onFail, '__call__'):
             request.onFail(request)
@@ -83,14 +84,14 @@ class Sender:
 
     def get_time_til_next_timeout(self):
         time_til_next_timeout = sys.maxint
-        for request in self.pending_requests:
+        for uid, request in self.pending_requests.items():
             if request.timeout < time_til_next_timeout:
                 time_til_next_timeout = request.timeout
                 
         return time_til_next_timeout
 
     def send_request(self, request, dest_addr, onResponse = None, onFail = None):
-        uid = UID(self.addr)
+        uid = UID(self.address)
 
         payload = request.get_bytes()
         pending_request = PendingRequest(dest_addr, uid, payload, onResponse, onFail)
