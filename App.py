@@ -87,6 +87,12 @@ class App:
         uid = UID.from_bytes(data)
         payload = data[UID.LENGTH:]
 
+        if self.sender.check_cached_responses(uid, sender_address):
+            return
+
+        if self.sender.check_pending_requests(uid):
+            return
+
         request = Request.from_bytes(payload)
         if request:
             self.handle_request(uid, request, sender_address)

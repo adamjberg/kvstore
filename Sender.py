@@ -37,26 +37,6 @@ def fail_request(self, request):
     self.client.handled_request_cache.put(uid_bytes, request)
     del self.client.pending_requests[uid_bytes]  
 
-def check_cached_response(self, uid, sender_address):
-    cached_response = self.response_cache[str(uid)]
-    if cached_response:
-        self.send_to(uid, cached_response, sender_address)
-        return True
-    else:
-        return False
-
-def check_pending_request(self, uid):
-    successful_request = self.pending_requests[str(uid)]
-
-    if successful_request:
-        onResponse = successful_request.onResponse
-        if onResponse is not None and hasattr(onResponse, '__call__'):
-            onResponse(message)
-        del self.pending_requests[str(uid)]
-        return True
-    else:
-        return False
-
 class Sender:
     MAX_RETRY_ATTEMPTS = 3
     DEFAULT_TIMEOUT_IN_MS = 100
@@ -65,6 +45,25 @@ class Sender:
         self.socket = sock
         self.pending_requests = {}
         self.response_cache = {}
+
+    def check_cached_responses(self, uid, sender_address):
+        try:
+            cached_response = self.response_cache[str(uid)]
+            self.send_to(uid, cached_response, sender_address)
+            return True
+        except:
+            return False
+
+    def check_pending_requests(self, uid):
+        try:
+            successful_request = self.pending_requests[str(uid)]
+            onResponse = successful_request.onResponse
+            if onResponse is not None and hasattr(onResponse, '__call__'):
+                onResponse(message)
+            del self.pending_requests[str(uid)]
+            return True
+        except:
+            return False
 
     def send_request(self, request, dest_addr, onResponse = None, onFail = None):
         uid = UID(self.addr)

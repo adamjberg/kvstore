@@ -70,9 +70,9 @@ class TestKVStore(unittest.TestCase):
         self.assert_get_value(self.get(key), value)
         self.assert_successful_request(self.remove(key))
 
-    # def test_cached_response(self):
-    #     key = "test_cached_response"
-    #     uid = self.get_uid()
+    def test_cached_response(self):
+        key = "test_cached_response"
+        uid = self.get_uid()
 
     #     self.assert_nonexistent_key(self.get(key, None, uid))
     #     # check for same response
