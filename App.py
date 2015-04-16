@@ -78,6 +78,8 @@ class App:
             if self.is_data_valid(data):
                 self.handle_valid_data(data, sender_address)
 
+            self.sender.check_for_timeouts()
+
     def is_data_valid(self, data):
         return data and len(data) > UID.LENGTH
 
