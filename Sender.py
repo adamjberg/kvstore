@@ -14,9 +14,16 @@ class PendingRequest:
         self.timeout = Sender.DEFAULT_TIMEOUT_IN_MS
         self.last_attempt_time = time.time()
 
+class CacheItem:
+    def __init__(self, value):
+        self.value = value
+        self.timestamp = time.time()
+
 class Sender:
     MAX_RETRY_ATTEMPTS = 3
     DEFAULT_TIMEOUT_IN_MS = 100
+    CACHED_RESPONSE_EXPIRATION_TIME = 5
+    MAX_RESPONSE_CACHE_SIZE = 1000
 
     def __init__(self, sock):
         self.socket = sock
@@ -49,12 +56,19 @@ class Sender:
         del self.pending_requests[uid_bytes]
 
     def check_cached_responses(self, uid, sender_address):
+        self.expire_cached_responses()
         try:
-            cached_response = self.response_cache[str(uid)]
+            cached_response = self.response_cache[str(uid)].value
             self.send_to(uid, cached_response, sender_address)
             return True
         except:
             return False
+
+    def expire_cached_responses(self):
+        cur_time = time.time()
+        for uid, cache_item in self.response_cache.items():
+            if cur_time - cache_item.timestamp > Sender.CACHED_RESPONSE_EXPIRATION_TIME:
+                del self.response_cache[uid]
 
     def check_pending_requests(self, uid):
         try:
@@ -87,8 +101,12 @@ class Sender:
         self.reply(uid, response.get_bytes(), dest_address)
 
     def reply(self, uid, payload, dest_address):
-        self.response_cache[str(uid)] = payload
+        self.add_to_response_cache(uid, payload)
         self.send_to(uid, payload, dest_address)
 
     def send_to(self, uid, payload, addr):
         self.socket.sendto(str(uid) + payload, addr)
+
+    def add_to_response_cache(self, uid, data):
+        if len(self.response_cache) < Sender.MAX_RESPONSE_CACHE_SIZE:
+            self.response_cache[str(uid)] = CacheItem(data)

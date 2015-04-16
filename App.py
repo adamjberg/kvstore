@@ -126,7 +126,7 @@ class App:
             return (None, None)
 
     def get_time_til_next_event(self):
-        return 1#self.sender.get_time_til_next_timeout()
+        return self.sender.get_time_til_next_timeout()
 
 if __name__ == "__main__":
     App()
