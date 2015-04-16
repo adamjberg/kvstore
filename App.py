@@ -111,7 +111,13 @@ class App:
             if request.command == ShutdownRequest.COMMAND:
                 sys.exit()
         else:
-            pass
+            forward_request(uid, request, sender_address)
+
+    def forward_request(self, uid, original_request, sender_address):
+        print "FORWARD"
+        dest_node = self.node_circle.get_optimal_node_for_key(request.key)
+        request = ForwardedRequest(uid, sender_address, original_request)
+        self.sender.send_request(request, dest_node.get_addr())
 
     def wait_until_next_event_or_data(self):
         try:
@@ -120,7 +126,7 @@ class App:
             return (None, None)
 
     def get_time_til_next_event(self):
-        return self.sender.get_time_til_next_timeout()
+        return 1#self.sender.get_time_til_next_timeout()
 
 if __name__ == "__main__":
     App()

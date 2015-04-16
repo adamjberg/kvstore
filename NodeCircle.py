@@ -5,12 +5,49 @@ import sys
 from Node import Node
 
 class NodeCircle:
+    NUM_REPLICA_NODES = 2
+
     def __init__(self, nodes, my_node):
         self.nodes = nodes
         self.my_node = my_node
 
     def is_my_key(self, key):
-        return True
+        return self.my_node in self.get_nodes_for_key(key)
 
     def get_location_for_key(self, key):
         return struct.unpack('B', hashlib.sha256(key).digest()[0])[0]
+
+    def get_nodes_for_key(self, key):
+        nodes = []
+        master_node = None
+        location = self.get_location_for_key(key)
+        for node in self.nodes:
+            if master_node is None:
+                master_node = node
+
+            if node.location >= location:
+                master_node = node
+                break
+
+        nodes.append(master_node)
+        successor = master_node
+        for i in range(NodeCircle.NUM_REPLICA_NODES):
+            successor = self.get_successor_for_node(successor)
+            if successor:
+                nodes.append(successor)
+            else:
+                break
+
+        return nodes
+
+    def get_successor_for_node(self, node):
+        successor = self.nodes[self.nodes.index(node) - len(self.nodes) + 1]
+        if successor != node:
+            return successor
+
+    def get_optimal_node_for_key(self, key):
+        nodes_for_key = self.get_nodes_for_key(key)
+
+        for node in nodes_for_key:
+            if node.online:
+                return node
