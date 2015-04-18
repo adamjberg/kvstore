@@ -62,8 +62,18 @@ class NodeCircle:
     def get_optimal_node_for_key(self, key):
         nodes_for_key = self.get_nodes_for_key(key)
 
+        min_avg_rtt = None
+        optimal_node = None
+        
         for node in nodes_for_key:
-            return node
+            if min_avg_rtt is None:
+                min_avg_rtt = node.average_rtt
+                optimal_node = node
+            elif node.average_rtt < min_avg_rtt:
+                min_avg_rtt = node.average_rtt
+                optimal_node = node
+
+        return optimal_node
 
     def get_online_nodes(self):
         return [node for node in self.nodes if node.online]
