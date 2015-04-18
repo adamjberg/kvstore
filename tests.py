@@ -37,7 +37,7 @@ class TestKVStore(unittest.TestCase):
         self.missing_responses = 0
 
         self.socket.settimeout(5)
-        self.test_node = Node("127.0.0.1", 12000, 0)
+        self.test_node = Node(socket.gethostname(), 33333, 0)
 
     def tearDown(self):
         self.socket.close()
@@ -117,18 +117,16 @@ class TestKVStore(unittest.TestCase):
         base_key = "test_many_put"
         base_val = "test_many_put"
 
-        for i in range(1000):
+        for i in range(100):
             key = base_key + str(i)
             val = base_val + str(i)
             self.assert_successful_request(self.put(key, val))
 
-        for i in range(1000):
+        for i in range(100):
             key = base_key + str(i)
             val = base_val + str(i)
             self.assert_get_value(self.get(key), val)
             self.assert_successful_request(self.remove(key))
-            self.assert_nonexistent_key(self.get(key))
-
 
     # def test_shutdown(self):
     #     self.assert_successful_request(self.shutdown())

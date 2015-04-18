@@ -1,3 +1,4 @@
+from __future__ import with_statement
 import os
 import socket
 import sys
@@ -133,4 +134,8 @@ class App:
         return self.sender.get_time_til_next_timeout()
 
 if __name__ == "__main__":
-    App()
+    try:
+        App()
+    except KeyboardInterrupt:
+        print "BYE"
+        sys.exit()
