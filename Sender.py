@@ -53,7 +53,6 @@ class Sender:
         if request.onFail is not None and hasattr(request.onFail, '__call__'):
             request.onFail(request)
 
-        self.handled_request_cache.put(uid_bytes, request)
         del self.pending_requests[uid_bytes]
 
     def check_cached_responses(self, uid, sender_address):
