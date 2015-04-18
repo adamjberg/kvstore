@@ -29,7 +29,6 @@ class TestKVStore(unittest.TestCase):
 
         self.nodes = self.get_nodes_from_file()
         self.test_node = self.nodes[0]
-        print "test " + str(self.test_node)
 
     def get_nodes_from_file(self):
         nodes = []
