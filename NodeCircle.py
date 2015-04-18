@@ -45,7 +45,7 @@ class NodeCircle:
         online_nodes = self.get_online_nodes()
 
         try:
-            successor = self.online_nodes[online_nodes.index(node) - len(online_nodes) + 1]
+            successor = online_nodes[online_nodes.index(node) - len(online_nodes) + 1]
             if successor != node:
                 return successor
         except:
