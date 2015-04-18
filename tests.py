@@ -12,18 +12,7 @@ node_circle = None
 class TestKVStore(unittest.TestCase):
     PORT = 11111
 
-    def discover_down_nodes(self):
-        global node_circle
-
-        request = PingRequest()
-        for node in node_circle.get_online_nodes():
-            resp = self.send_request(request, node)
-            if resp == None:
-                print "Node down: " + str(node)
-                node.online = False
-
     def setUp(self):
-        global node_circle
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.bind(("", 0))
         self.socket.setblocking(True)
@@ -36,8 +25,21 @@ class TestKVStore(unittest.TestCase):
         self.incorrect_responses = 0
         self.missing_responses = 0
 
-        self.socket.settimeout(5)
-        self.test_node = Node(socket.gethostname(), 33333, 0)
+        self.socket.settimeout(0.2)
+
+        self.nodes = self.get_nodes_from_file()
+        self.test_node = self.nodes[0]
+        print "test " + str(self.test_node)
+
+    def get_nodes_from_file(self):
+        nodes = []
+        with open("hosts.txt") as f:
+            lines = [x.strip('\n') for x in f.readlines()]
+        for line in lines:
+            host, port, location = line.split(":")
+            node = Node(host, port, location)
+            nodes.append(node)
+        return nodes
 
     def tearDown(self):
         self.socket.close()
