@@ -16,7 +16,7 @@ class App:
         self.init_node_circle()
         self.init_receiver_thread()
 
-        self.sender = Sender(self.socket)
+        self.sender = Sender(self.socket, self.node_circle)
         self.kv_store = KVStore()
 
         self.request_handler = RequestHandler(self.sender, self.kv_store, self.node_circle)
@@ -122,7 +122,7 @@ class App:
     def forward_request(self, uid, original_request, sender_address):
         dest_node = self.node_circle.get_optimal_node_for_key(original_request.key)
         request = ForwardedRequest(uid, sender_address, original_request)
-        self.sender.send_request(request, dest_node.get_addr())
+        self.sender.send_request(request, dest_node)
 
     def wait_until_next_event_or_data(self):
         try:

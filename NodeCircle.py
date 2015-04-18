@@ -5,7 +5,7 @@ import sys
 from Node import Node
 
 class NodeCircle:
-    NUM_REPLICA_NODES = 2
+    NUM_REPLICA_NODES = 1
 
     def __init__(self, nodes, my_node):
         self.nodes = nodes
@@ -19,9 +19,10 @@ class NodeCircle:
 
     def get_nodes_for_key(self, key):
         nodes = []
+        online_nodes = self.get_online_nodes()
         master_node = None
         location = self.get_location_for_key(key)
-        for node in self.nodes:
+        for node in online_nodes:
             if master_node is None:
                 master_node = node
 
@@ -41,13 +42,20 @@ class NodeCircle:
         return nodes
 
     def get_successor_for_node(self, node):
-        successor = self.nodes[self.nodes.index(node) - len(self.nodes) + 1]
-        if successor != node:
-            return successor
+        online_nodes = self.get_online_nodes()
+
+        try:
+            successor = self.online_nodes[online_nodes.index(node) - len(online_nodes) + 1]
+            if successor != node:
+                return successor
+        except:
+            return None
 
     def get_optimal_node_for_key(self, key):
         nodes_for_key = self.get_nodes_for_key(key)
 
         for node in nodes_for_key:
-            if node.online:
-                return node
+            return node
+
+    def get_online_nodes(self):
+        return [node for node in self.nodes if node.online]
