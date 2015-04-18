@@ -17,7 +17,6 @@ class TestKVStore(unittest.TestCase):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.bind(("", 0))
         self.socket.setblocking(True)
-        self.socket.settimeout(0.5)
         self.last_uid_time = time.time()
         self.used_uids = []
         self.num_requests = 0;
@@ -26,7 +25,7 @@ class TestKVStore(unittest.TestCase):
         self.incorrect_responses = 0
         self.missing_responses = 0
 
-        self.socket.settimeout(0.2)
+        self.socket.settimeout(1)
 
         self.nodes = self.get_nodes_from_file()
         self.test_node = random.choice(self.nodes)
@@ -119,12 +118,12 @@ class TestKVStore(unittest.TestCase):
         base_key = "test_many_put"
         base_val = "test_many_put"
 
-        for i in range(100):
+        for i in range(20):
             key = base_key + str(i)
             val = base_val + str(i)
             self.assert_successful_request(self.put(key, val))
 
-        for i in range(100):
+        for i in range(20):
             key = base_key + str(i)
             val = base_val + str(i)
             self.assert_get_value(self.get(key), val)

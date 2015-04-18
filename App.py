@@ -103,19 +103,7 @@ class App:
 
     def handle_request(self, uid, request, sender_address):
         if not hasattr(request, "key") or self.node_circle.is_my_key(request.key):
-            response = self.request_handler.get_response(request)
-
-            if response:
-                self.sender.send_response(uid, response, sender_address)
-
-            if request.command == ShutdownRequest.COMMAND:
-                sys.exit()
-            elif request.command == ForwardedRequest.COMMAND:
-                original_request = request.original_request
-
-                uid = request.original_uid
-                payload = original_request.get_bytes()
-                self.handle_valid_data(str(uid) + str(payload), request.return_addr)
+            self.request_handler.handle_request(uid, request, sender_address)
         else:
             self.forward_request(uid, request, sender_address)
 

@@ -5,7 +5,7 @@ import sys
 from Node import Node
 
 class NodeCircle:
-    NUM_REPLICA_NODES = 1
+    NUM_REPLICA_NODES = 2
 
     def __init__(self, nodes, my_node):
         self.nodes = nodes
@@ -16,6 +16,14 @@ class NodeCircle:
 
     def get_location_for_key(self, key):
         return struct.unpack('B', hashlib.sha256(key).digest()[0])[0]
+
+    def get_replica_nodes_for_key(self, key):
+        nodes = self.get_nodes_for_key(key)
+        try:
+            nodes.remove(self.my_node)
+        except:
+            pass
+        return nodes
 
     def get_nodes_for_key(self, key):
         nodes = []
