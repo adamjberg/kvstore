@@ -1,3 +1,4 @@
+from __future__ import with_statement
 import unittest
 import random
 import socket
@@ -28,7 +29,7 @@ class TestKVStore(unittest.TestCase):
         self.socket.settimeout(0.2)
 
         self.nodes = self.get_nodes_from_file()
-        self.test_node = self.nodes[0]
+        self.test_node = random.choice(self.nodes)
 
     def get_nodes_from_file(self):
         nodes = []
