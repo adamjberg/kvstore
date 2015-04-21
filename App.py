@@ -92,7 +92,7 @@ class App:
         if self.sender.check_cached_responses(uid, sender_address):
             return
 
-        if self.sender.check_pending_requests(uid):
+        if self.sender.check_pending_requests(uid, sender_address):
             return
 
         request = Request.from_bytes(payload)

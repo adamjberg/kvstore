@@ -11,6 +11,13 @@ class NodeCircle:
         self.nodes = nodes
         self.my_node = my_node
 
+    def has_node_with_address(self, address):
+        for node in self.nodes:
+            if node.get_addr() == address:
+                return True
+
+        return False
+
     def is_my_key(self, key):
         return self.my_node in self.get_nodes_for_key(key)
 

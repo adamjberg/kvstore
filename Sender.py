@@ -82,7 +82,12 @@ class Sender:
             if cur_time - cache_item.timestamp > Sender.CACHED_RESPONSE_EXPIRATION_TIME:
                 del self.response_cache[uid]
 
-    def check_pending_requests(self, uid):
+    def check_pending_requests(self, uid, sender_address):
+        is_part_of_node_circle = self.node_circle.has_node_with_address(sender_address)
+
+        if not is_part_of_node_circle:
+            return False
+
         try:
             successful_request = self.pending_requests[str(uid)]
             self.handle_successful_request(successful_request)
