@@ -26,7 +26,7 @@ class RequestHandler:
         self.handlers[request.command](uid, request, sender_address)
 
     def handle_put(self, uid, request, sender_address):
-        if self.kvStore.put(request.key, request.value):
+        if self.kvStore.put(self.node_circle.get_location_for_key(request.key), request.key, request.value):
             response = SuccessResponse()
             
             if request.command == PutRequest.COMMAND:
@@ -39,7 +39,7 @@ class RequestHandler:
 
 
     def handle_get(self, uid, request, sender_address):
-        value = self.kvStore.get(request.key)
+        value = self.kvStore.get(self.node_circle.get_location_for_key(request.key), request.key)
         if value:
             response = SuccessResponse(value)
         else:
@@ -48,7 +48,7 @@ class RequestHandler:
         self.reply(uid, response, sender_address)
 
     def handle_remove(self, uid, request, sender_address):
-        if self.kvStore.remove(request.key):
+        if self.kvStore.remove(self.node_circle.get_location_for_key(request.key), request.key):
             response = SuccessResponse()
             
             if request.command == PutRequest.COMMAND:
