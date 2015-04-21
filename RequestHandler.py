@@ -18,7 +18,8 @@ class RequestHandler:
             InternalGetRequest.COMMAND: self.handle_get,
             InternalRemoveRequest.COMMAND: self.handle_remove,
             PingRequest.COMMAND: self.handle_success,
-            ForwardedRequest.COMMAND: self.handle_forward
+            ForwardedRequest.COMMAND: self.handle_forward,
+            DebugInfoRequest.COMMAND: self.handle_debug_info
         }
 
     def handle_request(self, uid, request, sender_address):
@@ -75,6 +76,13 @@ class RequestHandler:
 
         forwarded_request = Request.from_bytes(payload)
         self.handle_request(uid, forwarded_request, request.return_addr)
+
+    def handle_debug_info(self, uid, request, sender_address):
+        data = ""
+        for node in self.node_circle.nodes:
+            data += node.hostname + " " + str(node.online) + " " + str(node.average_rtt) + "\n"
+
+        self.reply(uid, SuccessResponse(str(data)), sender_address)
 
     def handle_success(self, uid, request, sender_address):
         self.reply(uid, SuccessResponse(), sender_address)

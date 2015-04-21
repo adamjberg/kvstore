@@ -70,6 +70,8 @@ class Request:
             ip = socket.inet_ntoa(struct.pack("!I", ip))
             port = struct.unpack("<H", b[UID.LENGTH + 1 + 4:UID.LENGTH + 1 + 6])[0]
             return ForwardedRequest(original_uid, (ip, port), Request.from_bytes(b[UID.LENGTH + 1 + 6:]))
+        elif command == DebugInfoRequest.COMMAND:
+            return DebugInfoRequest()
         else:
             return None
 
@@ -193,3 +195,8 @@ class ForwardedRequest(Request):
         self.original_uid.get_bytes() + \
         struct.pack("<IH", struct.unpack("!I", socket.inet_aton(self.return_addr[0]))[0], self.return_addr[1]) + \
         self.original_request.get_bytes()
+
+class DebugInfoRequest(Request):
+    COMMAND = chr(50)
+    def __init__(self):
+        Request.__init__(self, DebugInfoRequest.COMMAND)

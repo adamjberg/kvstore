@@ -21,8 +21,8 @@ class CacheItem:
         self.timestamp = time.time()
 
 class Sender:
-    MAX_RETRY_ATTEMPTS = 3
-    DEFAULT_TIMEOUT_IN_MS = 100
+    MAX_RETRY_ATTEMPTS = 4
+    DEFAULT_TIMEOUT_IN_MS = 150
     CACHED_RESPONSE_EXPIRATION_TIME = 5
     MAX_RESPONSE_CACHE_SIZE = 1000
 

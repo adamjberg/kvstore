@@ -1,4 +1,5 @@
 from __future__ import with_statement
+import simplejson as json
 import unittest
 import random
 import socket
@@ -25,7 +26,7 @@ class TestKVStore(unittest.TestCase):
         self.incorrect_responses = 0
         self.missing_responses = 0
 
-        self.socket.settimeout(1)
+        self.socket.settimeout(5)
 
         self.nodes = self.get_nodes_from_file()
         self.test_node = random.choice(self.nodes)
@@ -53,8 +54,6 @@ class TestKVStore(unittest.TestCase):
         self.assertEqual(self.missing_responses, 0)
         self.assertEqual(self.failed_requests, 0)
         self.assertEqual(self.incorrect_responses, 0)
-
-        pass
 
     def test_unrecognized_command(self):
         req = Request(chr(100))
@@ -118,16 +117,36 @@ class TestKVStore(unittest.TestCase):
         base_key = "test_many_put"
         base_val = "test_many_put"
 
-        for i in range(20):
-            key = base_key + str(i)
-            val = base_val + str(i)
-            self.assert_successful_request(self.put(key, val))
+        avg_rtt = 0
 
-        for i in range(20):
+        for i in range(10):
             key = base_key + str(i)
             val = base_val + str(i)
+            start_time = time.time()
+            self.assert_successful_request(self.put(key, val))
+            avg_rtt += time.time() - start_time
+
+        for i in range(10):
+            key = base_key + str(i)
+            val = base_val + str(i)
+            start_time = time.time()
             self.assert_get_value(self.get(key), val)
+            avg_rtt += time.time() - start_time
+            start_time = time.time()
             self.assert_successful_request(self.remove(key))
+            avg_rtt += time.time() - start_time
+
+        print "RTT: " + str(avg_rtt / 300)
+
+    def testz_get_debug_info(self):
+        for node in self.nodes:
+            print "\nDebug for " + str(node.hostname)
+            resp = self.send_request(DebugInfoRequest(), node)
+            if resp:
+                print resp[3:]
+            else:
+                print "No Response"
+        print ""
 
     # def test_shutdown(self):
     #     self.assert_successful_request(self.shutdown())
