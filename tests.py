@@ -26,7 +26,7 @@ class TestKVStore(unittest.TestCase):
         self.incorrect_responses = 0
         self.missing_responses = 0
 
-        self.socket.settimeout(5)
+        self.socket.settimeout(0.1)
 
         self.nodes = self.get_nodes_from_file()
         self.test_node = random.choice(self.nodes)
@@ -119,14 +119,14 @@ class TestKVStore(unittest.TestCase):
 
         avg_rtt = 0
 
-        for i in range(10):
+        for i in range(1000):
             key = base_key + str(i)
             val = base_val + str(i)
             start_time = time.time()
             self.assert_successful_request(self.put(key, val))
             avg_rtt += time.time() - start_time
 
-        for i in range(10):
+        for i in range(1000):
             key = base_key + str(i)
             val = base_val + str(i)
             start_time = time.time()
@@ -136,7 +136,7 @@ class TestKVStore(unittest.TestCase):
             self.assert_successful_request(self.remove(key))
             avg_rtt += time.time() - start_time
 
-        print "RTT: " + str(avg_rtt / 300)
+        print "RTT: " + str(avg_rtt / 3000)
 
     def testz_get_debug_info(self):
         for node in self.nodes:

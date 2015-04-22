@@ -9,6 +9,8 @@ from RequestHandler import *
 from NodeCircle import *
 from ReceiverThread import *
 from Sender import *
+from DataMigrationThread import *
+from NodeMonitorThread import *
 
 class App:
 
@@ -18,8 +20,10 @@ class App:
 
         self.sender = Sender(self.socket, self.node_circle)
         self.kv_store = KVStore()
-
         self.request_handler = RequestHandler(self.sender, self.kv_store, self.node_circle)
+
+        self.init_data_migration_thread()
+        self.init_node_monitor_thread()
 
         self.main_loop()
 
@@ -72,9 +76,23 @@ class App:
         self.receiver_thread = ReceiverThread(self.socket, self.received_data_queue)
         self.receiver_thread.start()
 
+    def init_data_migration_thread(self):
+        self.data_migration_thread = DataMigrationThread(self.sender, self.node_circle, self.kv_store, self.received_data_queue)
+        self.data_migration_thread.start()
+
+    def init_node_monitor_thread(self):
+        self.node_monitor_thread = NodeMonitorThread(self.sender, self.node_circle, self.received_data_queue)
+        self.node_monitor_thread.start()
+
     def main_loop(self):
         while True:
-            data, sender_address = self.wait_until_next_event_or_data()
+            received_data = self.wait_until_next_event_or_data()
+
+            if received_data is not None:
+                data, sender_address = received_data
+            else:
+                data = None
+                sender_address = None
 
             if self.is_data_valid(data):
                 self.handle_valid_data(data, sender_address)

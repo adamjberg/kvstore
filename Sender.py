@@ -11,7 +11,7 @@ class PendingRequest:
         self.onResponse = onResponse
         self.onFail = onFail
         self.attempts = 0
-        self.timeout = Sender.DEFAULT_TIMEOUT_IN_MS
+        self.timeout = Sender.DEFAULT_TIMEOUT
         self.last_attempt_time = time.time()
         self.first_attempt_time = time.time()
 
@@ -22,7 +22,7 @@ class CacheItem:
 
 class Sender:
     MAX_RETRY_ATTEMPTS = 4
-    DEFAULT_TIMEOUT_IN_MS = 150
+    DEFAULT_TIMEOUT = 0.15
     CACHED_RESPONSE_EXPIRATION_TIME = 5
     MAX_RESPONSE_CACHE_SIZE = 1000
 
@@ -36,7 +36,7 @@ class Sender:
     def check_for_timeouts(self):
         cur_time = time.time()
         for uid, request in self.pending_requests.items():
-            time_since_last_attempt = (cur_time - request.last_attempt_time) * 1000
+            time_since_last_attempt = (cur_time - request.last_attempt_time)
 
             if time_since_last_attempt > request.timeout:
                 if request.attempts >= Sender.MAX_RETRY_ATTEMPTS:
