@@ -23,6 +23,10 @@ class Request:
         return str(self.command)
 
     @staticmethod
+    def is_internal(request):
+        return request.command >= InternalPutRequest.COMMAND and request.command <= InternalRemoveRequest.COMMAND
+
+    @staticmethod
     def from_bytes(b):
         if b is None or len(b) == 0:
             return None
@@ -53,15 +57,6 @@ class Request:
             return InternalRemoveRequest(key)
         elif command == JoinRequest.COMMAND:
             return JoinRequest()
-        elif command == JoinSuccessRequest.COMMAND:
-            return JoinSuccessRequest()
-        elif command == SetOnlineRequest.COMMAND:
-            return SetOnlineRequest()
-        elif command == SetOfflineRequest.COMMAND:
-            ip = struct.unpack("<I", b[1:5])[0]
-            ip = socket.inet_ntoa(struct.pack("!I", ip))
-            port = struct.unpack("<H", b[5:])[0]
-            return SetOfflineRequest((ip, port))
         elif command == PingRequest.COMMAND:
             return PingRequest()
         elif command == ForwardedRequest.COMMAND:
@@ -157,25 +152,6 @@ class JoinRequest(Request):
     COMMAND = chr(44)
     def __init__(self):
         Request.__init__(self, JoinRequest.COMMAND)
-
-class JoinSuccessRequest(Request):
-    COMMAND = chr(45)
-    def __init__(self):
-        Request.__init__(self, JoinSuccessRequest.COMMAND)
-
-class SetOnlineRequest(Request):
-    COMMAND = chr(46)
-    def __init__(self):
-        Request.__init__(self, SetOnlineRequest.COMMAND)
-
-class SetOfflineRequest(Request):
-    COMMAND = chr(47)
-    def __init__(self, addr):
-        Request.__init__(self, SetOfflineRequest.COMMAND)
-        self.addr = addr
-
-    def get_bytes(self):
-        return Request.get_bytes(self) + struct.pack("<IH", struct.unpack("!I", socket.inet_aton(self.addr[0]))[0], self.addr[1])
 
 class PingRequest(Request):
     COMMAND = chr(48)

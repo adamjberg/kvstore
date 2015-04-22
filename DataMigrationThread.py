@@ -4,7 +4,7 @@ from NodeCircle import *
 from Request import *
 
 class DataMigrationThread(Thread):
-    TIME_BETWEEN_MIGRATIONS = 1
+    TIME_BETWEEN_MIGRATIONS = 60
 
     def __init__(self, sender, node_circle, kv_store, received_data_queue):
         Thread.__init__(self)

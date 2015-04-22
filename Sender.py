@@ -56,7 +56,7 @@ class Sender:
 
         onResponse = request.onResponse
         if onResponse is not None and hasattr(onResponse, '__call__'):
-            onResponse(None)
+            onResponse()
         del self.pending_requests[str(request.uid)]
 
     def handle_failed_request(self, request):
@@ -64,7 +64,7 @@ class Sender:
 
         onFail = request.onFail
         if onFail is not None and hasattr(onFail, '__call__'):
-            onFail(request)
+            onFail()
         del self.pending_requests[str(request.uid)]
 
     def check_cached_responses(self, uid, sender_address):

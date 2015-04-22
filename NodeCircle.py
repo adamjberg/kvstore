@@ -14,6 +14,11 @@ class NodeCircle:
         self.nodes.remove(my_node)
         self.my_node = my_node
 
+    def get_node_with_address(self, address):
+        for node in self.all_nodes:
+            if node.get_addr() == address:
+                return node
+
     def has_node_with_address(self, address):
         for node in self.all_nodes:
             if node.get_addr() == address:
@@ -41,7 +46,7 @@ class NodeCircle:
         for node in predecessors:
             locations += self.get_locations_for_node(node)
 
-        return locations
+        return set(locations)
 
     def get_locations_for_my_node(self):
         return self.get_locations_for_node(self.my_node)
@@ -100,6 +105,9 @@ class NodeCircle:
         nodes.append(master_node)
         nodes += self.get_replica_nodes_for_node(master_node)
         return nodes
+
+    def get_my_predecessor(self):
+        return self.get_predecessor_for_node(self.my_node)
 
     def get_predecessor_for_node(self, node):
         if node.online:

@@ -1,12 +1,14 @@
 import sys
+import time
 from Node import Node
 from Response import *
 from Request import *
+from HandleJoinThread import *
 
 class RequestHandler:
-    def __init__(self, sender, kvStore, node_circle):
+    def __init__(self, sender, kv_store, node_circle):
         self.sender = sender
-        self.kvStore = kvStore
+        self.kv_store = kv_store
         self.node_circle = node_circle
 
         self.handlers = {
@@ -19,6 +21,7 @@ class RequestHandler:
             InternalRemoveRequest.COMMAND: self.handle_remove,
             PingRequest.COMMAND: self.handle_success,
             ForwardedRequest.COMMAND: self.handle_forward,
+            JoinRequest.COMMAND: self.handle_join,
             DebugInfoRequest.COMMAND: self.handle_debug_info
         }
 
@@ -26,7 +29,7 @@ class RequestHandler:
         self.handlers[request.command](uid, request, sender_address)
 
     def handle_put(self, uid, request, sender_address):
-        if self.kvStore.put(self.node_circle.get_location_for_key(request.key), request.key, request.value):
+        if self.kv_store.put(self.node_circle.get_location_for_key(request.key), request.key, request.value):
             response = SuccessResponse()
             
             if request.command == PutRequest.COMMAND:
@@ -39,7 +42,7 @@ class RequestHandler:
 
 
     def handle_get(self, uid, request, sender_address):
-        value = self.kvStore.get(self.node_circle.get_location_for_key(request.key), request.key)
+        value = self.kv_store.get(self.node_circle.get_location_for_key(request.key), request.key)
         if value:
             response = SuccessResponse(value)
         else:
@@ -48,7 +51,7 @@ class RequestHandler:
         self.reply(uid, response, sender_address)
 
     def handle_remove(self, uid, request, sender_address):
-        if self.kvStore.remove(self.node_circle.get_location_for_key(request.key), request.key):
+        if self.kv_store.remove(self.node_circle.get_location_for_key(request.key), request.key):
             response = SuccessResponse()
             
             if request.command == PutRequest.COMMAND:
@@ -76,6 +79,13 @@ class RequestHandler:
 
         forwarded_request = Request.from_bytes(payload)
         self.handle_request(uid, forwarded_request, request.return_addr)
+
+    def handle_join(self, uid, request, sender_address):
+        self.handle_success(uid, request, sender_address)
+
+        new_node = self.node_circle.get_node_with_address(sender_address)
+        handle_join_thread = HandleJoinThread(self.sender, self.node_circle, new_node, self.kv_store)
+        handle_join_thread.start()
 
     def handle_debug_info(self, uid, request, sender_address):
         data = ""

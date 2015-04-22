@@ -25,6 +25,8 @@ class App:
         self.init_data_migration_thread()
         self.init_node_monitor_thread()
 
+        self.send_join_request()
+
         self.main_loop()
 
     def init_node_circle(self):
@@ -84,6 +86,12 @@ class App:
         self.node_monitor_thread = NodeMonitorThread(self.sender, self.node_circle, self.received_data_queue)
         self.node_monitor_thread.start()
 
+    def send_join_request(self):
+        predecessor = self.node_circle.get_my_predecessor()
+        print "send join " + str(predecessor)
+        if predecessor:
+            self.sender.send_request(JoinRequest(), predecessor, onFail=self.send_join_request)
+
     def main_loop(self):
         while True:
             received_data = self.wait_until_next_event_or_data()
@@ -120,7 +128,7 @@ class App:
             self.sender.send_response(uid, UnrecognizedCommandResponse(), sender_address)
 
     def handle_request(self, uid, request, sender_address):
-        if not hasattr(request, "key") or self.node_circle.is_my_key(request.key):
+        if not hasattr(request, "key") or self.node_circle.is_my_key(request.key) or Request.is_internal(request):
             self.request_handler.handle_request(uid, request, sender_address)
         else:
             self.forward_request(uid, request, sender_address)
